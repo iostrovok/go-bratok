@@ -13,11 +13,25 @@ type ReadFlagsTestsSuite struct{}
 
 var _ = Suite(&ReadFlagsTestsSuite{})
 
-func (s *ReadFlagsTestsSuite) Test_ReadFlags_Check_ServerID(c *C) {
+func (s *ReadFlagsTestsSuite) TestReadFlagsInit(c *C) {
+	f := New()
+	c.Assert(f, NotNil)
+}
 
-	f := NewFlagsDSL()
-
-	err := f.ReadFlags()
-
+func (s *ReadFlagsTestsSuite) TestReadFlagsRead(c *C) {
+	f := New()
+	err := f.Read()
 	c.Assert(err, NotNil)
+}
+
+func (s *ReadFlagsTestsSuite) TestReadFlagsCheckFlags(c *C) {
+
+	f := New()
+
+	err := f.CheckFlags()
+	c.Assert(err, NotNil)
+
+	f.ServerID = "ssss"
+	err = f.CheckFlags()
+	c.Assert(err, IsNil)
 }

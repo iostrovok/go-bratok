@@ -1,7 +1,13 @@
 package LoaderConfig
 
 import (
+	"Config/Config"
+	"Config/ReadFlags"
+	"Net/HTTPLoader"
+	"fmt"
 	. "gopkg.in/check.v1"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -13,21 +19,59 @@ type LoaderConfigTestsSuite struct{}
 
 var _ = Suite(&LoaderConfigTestsSuite{})
 
-func (s *LoaderConfigTestsSuite) Test_LoaderConfig_Load_RemoutConfig(c *C) {
+const (
+	testConfig string = `{"host":"test_host"}`
+)
 
-	f := NewLoaderConfig()
+func (s *LoaderConfigTestsSuite) TestLoaderConfigLoadRemoutConfig(c *C) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, testConfig)
+	}))
+	defer ts.Close()
 
-	err := f.Load("http://127.0.0.1/test.conf")
+	config := Config.New(ReadFlags.New())
+	loader := HTTPLoader.NewHTTPLoader()
 
-	// LoaderConfig tries Load "http://127.0.0.1/test.conf"
+	f := NewLoaderConfig(config, loader)
+
+	err := f.LoadURL(ts.URL)
 	c.Assert(err, IsNil)
 }
 
-func (s *LoaderConfigTestsSuite) Test_LoaderConfig_Not_Load_EmptyURL(c *C) {
+func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadEmptyFile(c *C) {
 
-	f := NewLoaderConfig()
+	config := Config.New(ReadFlags.New())
+	loader := HTTPLoader.NewHTTPLoader()
 
-	err := f.Load("")
+	f := NewLoaderConfig(config, loader)
+
+	err := f.LoadFile("")
+
+	// LoaderConfig tries Load EmptyURL
+	c.Assert(err, NotNil)
+}
+
+func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadFile(c *C) {
+
+	config := Config.New(ReadFlags.New())
+	loader := HTTPLoader.NewHTTPLoader()
+
+	f := NewLoaderConfig(config, loader)
+
+	err := f.LoadFile("")
+
+	// LoaderConfig tries Load EmptyURL
+	c.Assert(err, NotNil)
+}
+
+func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadEmptyURL(c *C) {
+
+	config := Config.New(ReadFlags.New())
+	loader := HTTPLoader.NewHTTPLoader()
+
+	f := NewLoaderConfig(config, loader)
+
+	err := f.LoadURL("")
 
 	// LoaderConfig tries Load EmptyURL
 	c.Assert(err, NotNil)

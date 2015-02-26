@@ -24,32 +24,35 @@ type Flags struct {
 	Port       int
 	ServerID   string
 	Path       string
+	ConfFile   string
 }
 
-func NewFlags() *Flags {
+func New() *Flags {
 
 	f := Flags{
 		IP:         "127.0.0.1",
-		Port:       10200,
+		Port:       0,
 		Host:       "localhost",
 		ServerID:   "",
 		DebugMode:  false,
 		ConfigHost: "",
 		Path:       "",
+		ConfFile:   "",
 	}
 
 	return &f
 }
 
-func (f *Flags) ReadFlags() error {
+func (f *Flags) Read() error {
 
 	debug := flag.Bool("debug", false, "-d")
-	port := flag.Int("port", 10200, "-p")
+	port := flag.Int("port", 0, "-po")
 	ip := flag.String("ip", "127.0.0.1", "-ip")
 	host := flag.String("host", "localhost", "-h")
 	serverID := flag.String("id", "", "-id")
-	configHost := flag.String("config_host", "", "-ch")
+	configHost := flag.String("master_host", "", "-ch")
 	path := flag.String("path", "", "-pa")
+	confFile := flag.String("config", "", "-cf")
 
 	flag.Parse()
 
@@ -60,6 +63,7 @@ func (f *Flags) ReadFlags() error {
 	f.DebugMode = *debug
 	f.ConfigHost = *configHost
 	f.Path = *path
+	f.ConfFile = *confFile
 
 	return f.CheckFlags()
 }

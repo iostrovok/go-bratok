@@ -1050,7 +1050,7 @@ func main() {
 	port := config.HTTP.PortServer
 	go ListenStatus(config.HTTP.PortStatus)
 
-	log.Printf("config: %#v\n", config)
+	log.Printf("config: %+v\n", config)
 
 	var err_db error
 

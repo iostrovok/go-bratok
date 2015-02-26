@@ -1,8 +1,11 @@
 package LoaderConfig
 
 import (
-	"errors"
-	"time"
+	"Config/Config"
+	"Net/HTTPLoader"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 )
 
 type LoaderConfigBase interface {
@@ -12,31 +15,55 @@ type LoaderConfigBase interface {
 LoaderConfig is a structure with all command line flags
 */
 type LoaderConfig struct {
-	URL      string
-	body     []byte
-	LastTime time.Time
+	c *Config.Config
+	h *HTTPLoader.HTTPLoader
 }
 
 // NewLoaderConfig is constructor
-func NewLoaderConfig() *LoaderConfig {
+func NewLoaderConfig(c *Config.Config, hl *HTTPLoader.HTTPLoader) *LoaderConfig {
 
-	l := LoaderConfig{
-		body: []byte{},
+	lc := LoaderConfig{
+		c: c,
+		h: hl,
 	}
 
-	return &l
+	return &lc
 }
 
 // Load - loads config
-func (f *LoaderConfig) Load(url string) error {
-	if url == "" {
-		return errors.New("URL mustn't be empty")
+func (lc *LoaderConfig) LoadURL(hostPath string) error {
+
+	js, errLoadJson := lc.h.LoadJson("GET", hostPath, map[string]interface{}{})
+	if errLoadJson != nil {
+		return errLoadJson
 	}
 
-	return nil
+	return lc.c.InitNew(js)
 }
 
-// Body - return body as string
-func (f *LoaderConfig) Body() (string, error) {
-	return "", nil
+// Load - loads config
+func (lc *LoaderConfig) LoadFile(file string) error {
+
+	data, errReadFile := ioutil.ReadFile(file)
+
+	if errReadFile != nil {
+		return errReadFile
+	}
+
+	fmt.Print(string(data))
+
+	js, errToJson := toJson(data)
+	if errToJson != nil {
+		return errToJson
+	}
+
+	return lc.c.InitNew(js)
+}
+
+func toJson(data []byte) (map[string]interface{}, error) {
+
+	out := map[string]interface{}{}
+
+	err := json.Unmarshal(data, &out)
+	return out, err
 }
