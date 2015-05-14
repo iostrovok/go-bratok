@@ -35,8 +35,12 @@ func (manager *Manager) Rules(server *WebServer.Server) {
 				res = manager.logScriptById(mes.ID)
 			case "script/info":
 				res, err = manager.infoScriptById(mes.ID)
+			case "server/info":
+				res, err = manager.infoServerById(mes.ID)
 			case "scripts_list":
 				res, err = manager.scriptsList(mes)
+			case "server_list":
+				res, err = manager.serversList(mes)
 			case "test":
 				res["status"] = "DATA FROM MENEGER"
 			default:

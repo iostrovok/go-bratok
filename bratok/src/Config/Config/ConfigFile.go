@@ -33,11 +33,18 @@ type Script struct {
 }
 
 type Server struct {
-	ID       string `json:"id"`
-	IP       string `json:"ip"`
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	IsMaster bool   `json:"is_master"`
+	ID       string   `json:"id"`
+	IP       string   `json:"ip"`
+	Host     string   `json:"host"`
+	Port     int      `json:"port"`
+	IsMaster bool     `json:"is_master"`
+	Scripts  []string `json:"scripts"`
+}
+
+/* Data from config file */
+type ConfigDataHttp struct {
+	Error string      `json:"error"`
+	Data  *ConfigData `json:"data"`
 }
 
 /* Data from config file */
@@ -50,15 +57,28 @@ type ConfigData struct {
 	StaticFilesDir string     `json:"staticdir"`
 }
 
+func (config *Config) LoadConfigFileFromLine(data []byte) error {
+
+	confData := ConfigDataHttp{}
+	if err := json.Unmarshal(data, &confData); err != nil {
+		return err
+	}
+
+	config.ConfigData = confData.Data
+	return config._postProceecingConfigFile()
+}
+
+func (config *Config) _postProceecingConfigFile() error {
+	config._checkConfigData()
+	return config._loadConfigData()
+}
+
 func (config *Config) LoadConfigFile() error {
 	// then config file settings
 
 	if config.configFile == "" {
 		return nil
 	}
-
-	log.Printf("config.configFile: %s\n", config.configFile)
-	log.Printf("config.autoConfigFile: %s\n", config.autoConfigFile)
 
 	file := config.configFile
 
@@ -72,26 +92,14 @@ func (config *Config) LoadConfigFile() error {
 	log.Printf("\ndata: %s\n", data)
 
 	if errReadFile != nil {
-		log.Printf("0. LoadConfigFile: error: %s\n", errReadFile)
 		return errReadFile
 	}
 
 	if err := config._parseConfigData(data); err != nil {
-		log.Printf("1. LoadConfigFile: error: %s\n", err)
-		log.Printf("1. LoadConfigFile: data: %s\n", data)
 		return err
 	}
 
-	config._checkConfigData()
-
-	log.Printf("config.ConfigData: %+v\n", config.ConfigData)
-
-	if err := config._loadConfigData(); err != nil {
-		log.Printf("2. LoadConfigFile: error: %s\n", err)
-		return err
-	}
-
-	return nil
+	return config._postProceecingConfigFile()
 }
 
 func (config *Config) _checkConfigData() {

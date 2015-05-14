@@ -77,12 +77,14 @@ func New(config *ConfigHttp.Config) (*Server, error) {
 		"/api/script_list":       ScriptsEdit.All,
 		"/api/script/info":       ScriptsEdit.One,
 		"/api/get/server/config": Servers.Config,
+		"/api/server_list":       Servers.All,
 	}
 
 	GET_listID := map[string]interface{}{
 		"/api/start":       StartScript.Handler,
 		"/api/script/log":  ScriptsEdit.Log,
 		"/api/script/info": ScriptsEdit.One,
+		"/api/server/info": Servers.One,
 		"/api/script/save": ScriptsEdit.Save,
 	}
 

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	//"log"
+	"log"
 	"os"
 	"sort"
 	"sync"
@@ -36,38 +36,79 @@ type Config struct {
 	mu             *sync.Mutex
 }
 
-func New(flags *ReadFlags.Flags) *Config {
-	config := Config{}
-	config.mu = &sync.Mutex{}
-	config.Scripts = map[string]*CronScript.Script{}
+func NewFromRemout(flags *ReadFlags.Flags, RemoutConfig []byte) (*Config, error) {
 
-	config.ServerID = flags.ServerID
-
-	config.scriptLogDir = "/tmp/"
-	config.scriptLogFile = "bratok.scripts.log"
-
-	if flags != nil {
-		config.flags = flags
-
-		if config.flags.ConfFile != "" {
-			config.configFile = config.flags.ConfFile
-		}
+	if len(RemoutConfig) == 0 {
+		return nil, errors.New("RemoutConfig is empty")
 	}
+
+	config := _init(flags)
+	if config.ErrorLoad != nil {
+		return config, config.ErrorLoad
+	}
+
+	config._postInit()
+	res := config.LoadConfigFileFromLine(RemoutConfig)
+
+	return config, res
+}
+
+func New(flags *ReadFlags.Flags) *Config {
+	config := _init(flags)
+
+	if config.flags.ConfFile != "" {
+		config.configFile = config.flags.ConfFile
+	}
+
+	config._postInit()
+	config.ErrorLoad = config.LoadConfigFile()
+
+	return config
+}
+
+func (config *Config) _postInit() {
 
 	config.autoConfigFile = config.configFile + ".auto.js"
 	if _, err := os.Stat(config.autoConfigFile); err == nil {
 		config.useAutoConfig = true
 	}
 
+}
+
+func _init(flags *ReadFlags.Flags) *Config {
+	config := Config{}
+	config.mu = &sync.Mutex{}
+	config.Scripts = map[string]*CronScript.Script{}
+
+	config.scriptLogDir = "/tmp/"
+	config.scriptLogFile = "bratok.scripts.log"
+
+	if flags == nil {
+		config.ErrorLoad = errors.New("No found ServerID")
+		return &config
+	}
+
+	if flags.ServerID == "" {
+		config.ErrorLoad = errors.New("No found ServerID")
+		return &config
+	}
+
+	config.ServerID = flags.ServerID
+	config.flags = flags
+
 	config._checkConfigData()
-	config.ErrorLoad = config.LoadConfigFile()
 
 	return &config
 }
 
 func (config *Config) GetHttpData() (*Server, error) {
 
+	log.Printf("GetHttpData. config.ServerID: %s\n", config.ServerID)
+	log.Printf("GetHttpData. config.ConfigData.Servers: %+v\n", config.ConfigData.Servers)
+
 	for _, d := range *config.ConfigData.Servers {
+		log.Printf("GetHttpData. d: %+v\n", d)
+
 		if config.ServerID == d.ID {
 			return d, nil
 		}
@@ -137,6 +178,18 @@ func (config *Config) GetScript(id string) (*CronScript.Script, bool) {
 	for keyId, script := range config.Scripts {
 		if keyId == id {
 			return script, true
+		}
+	}
+
+	return nil, false
+}
+
+func (config *Config) GetServer(id string) (*Server, bool) {
+
+	for _, server := range *config.ConfigData.Servers {
+		log.Printf("==========> server : %+v", server)
+		if server.ID == id {
+			return server, true
 		}
 	}
 

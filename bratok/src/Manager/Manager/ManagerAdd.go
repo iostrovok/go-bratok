@@ -79,6 +79,34 @@ func (manager *Manager) scriptsList(mes CronMessage.Mess) (map[string]interface{
 	}, nil
 }
 
+func (manager *Manager) serversList(mes CronMessage.Mess) (map[string]interface{}, error) {
+
+	// mes.ID - server id
+	list := manager.config.ServersList()
+
+	return map[string]interface{}{
+		"list": list,
+	}, nil
+}
+
+func (manager *Manager) infoServerById(server_id string) (map[string]interface{}, error) {
+
+	if server_id == "" {
+		return nil, fmt.Errorf("infoServerById. Server id is empty")
+	}
+
+	server, find := manager.config.GetServer(server_id)
+	if find {
+		return map[string]interface{}{
+				"data": server,
+			},
+			nil
+	}
+
+	return nil, fmt.Errorf("infoServerById. Server [id =  %s] is not found", server_id)
+
+}
+
 func (manager *Manager) infoScriptById(script_id string) (map[string]interface{}, error) {
 
 	if script_id == "" {

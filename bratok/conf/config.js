@@ -27,12 +27,21 @@
         "ip": "127.0.0.1",
         "host": "",
         "port": 21222,
-        "is_master": true
+        "is_master": true,
+        "scripts": ["ls1", "longperl", "ls2"]
     }, {
         "id": "second",
         "ip": "127.0.0.1",
         "host": "",
         "port": 21223,
-        "is_master": false
+        "is_master": false,
+        "scripts": ["ls1" ]
+    }, {
+        "id": "third",
+        "ip": "127.0.0.1",
+        "host": "",
+        "port": 21224,
+        "is_master": false,
+        "scripts": ["ls2"]
     }]
 }

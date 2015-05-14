@@ -25,7 +25,7 @@ type Config struct {
 func New(flags *ReadFlags.Flags, cronConf *cronConf.Config) *Config {
 
 	config := Config{
-		_Port:     21222,
+		_Port:     0,
 		staticDir: "/tmp",
 		staticUrl: "/static",
 		flags:     flags,
@@ -44,12 +44,16 @@ func New(flags *ReadFlags.Flags, cronConf *cronConf.Config) *Config {
 
 	/* Reads data from config file */
 	if data, err := cronConf.GetHttpData(); err == nil {
+		log.Printf("cronConf.GetHttpData. data: %+v\n", data)
+
 		config._Port = data.Port
 		config._ID = data.ID
 		config._IP = data.IP
 		config._Host = data.Host
 		config._IsMaster = data.IsMaster
 	}
+
+	log.Printf("cronConf.GetHttpData. config: %+v\n", config)
 
 	/* Re-reads data from command line */
 	if flags.Port > 0 {

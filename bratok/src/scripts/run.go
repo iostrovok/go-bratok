@@ -3,7 +3,7 @@ package main
 import (
 	"Config/Config"
 	"Config/ConfigHttp"
-	"Config/CronScript"
+	//"Config/CronScript"
 	"Config/ReadFlags"
 	"Logger/Logger"
 	"Manager/Manager"
@@ -27,23 +27,30 @@ func main() {
 
 	runtime.GOMAXPROCS(MaxParallelism())
 
+	var cronConfig *Config.Config
+
 	/* Do we have to load a remote config? Loading... */
-	RemoutConfig := []byte{}
 	if flags.ConfigHost != "" {
-		RemoutConfig, err = WebClient.LoadRemoutConfig(flags.ConfigHost)
+		RemoutConfig, err := WebClient.LoadRemoutConfig(flags.ConfigHost)
 		if err != nil {
 			fmt.Printf("We have load remout config [%s] error:: %s\n", flags.ConfigHost, err)
 			os.Exit(1)
 		}
 		fmt.Printf("RemoutConfig: %s\n", RemoutConfig)
-		os.Exit(0)
+		cronConfig, err = Config.NewFromRemout(flags, RemoutConfig)
+		if err != nil {
+			fmt.Printf("NewFromRemout: %s\n", err)
+			os.Exit(1)
+		}
+	} else {
+		cronConfig = Config.New(flags)
 	}
 
-	cronConfig := Config.New(flags)
 	if cronConfig.ErrorLoad != nil {
 		fmt.Printf("cronConfig.ErrorLoad: %s\n", cronConfig.ErrorLoad)
 		os.Exit(1)
 	}
+
 	Common.SetCronConfig(cronConfig)
 
 	logger := Logger.New(cronConfig)
@@ -62,11 +69,11 @@ func main() {
 		log.Panicf("%s", errWebClient)
 	}
 
-	/* TEST POINT START */
-	script := CronScript.New("fromRun", "ls", "-a", "-r", "/")
-	script.SetTime("*/1", "*", "*", "*", "*")
-	cronConfig.AddScript(script)
-	/* TEST POINT FINISH */
+	// /* TEST POINT START */
+	// script := CronScript.New("fromRun", "ls", "-a", "-r", "/")
+	// script.SetTime("*/1", "*", "*", "*", "*")
+	// cronConfig.AddScript(script)
+	// /* TEST POINT FINISH */
 
 	manager := Manager.New(cronConfig)
 	manager.SetLogger(logger)

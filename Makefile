@@ -12,10 +12,13 @@ export GOPATH := ${ROOT}/bratok/:${GOPATH}
 # 	cd ./bratok; go test ./src/*/
 
 run:
-	cd ./go-bratok; go run ./bratok/src/scripts/run.go -id=first -port=21222 -config="./go-bratok/bratok/conf/config.js"
+	 go run ./bratok/src/scripts/run.go -id=first -config="./bratok/conf/config.js"
 
 run2:
-	cd ./go-bratok; go run ./bratok/src/scripts/run.go -id=second -master_host="http://127.0.0.1:21222"
+	 go run ./bratok/src/scripts/run.go -id=second -master_host="http://127.0.0.1:21222"
+
+run3:
+	 go run ./bratok/src/scripts/run.go -id=third -master_host="http://127.0.0.1:21222"
 
 log:
 	tail -f /tmp/bratok.scripts.log
