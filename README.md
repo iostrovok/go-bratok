@@ -7,3 +7,5 @@
 No yet
 
 ## DEVELOPER RELEASE. ##
+
+### REST API. ###
