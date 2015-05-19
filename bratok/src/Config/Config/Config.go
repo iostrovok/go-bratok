@@ -54,7 +54,14 @@ func NewFromRemout(flags *ReadFlags.Flags, RemoutConfig []byte) (*Config, error)
 }
 
 func New(flags *ReadFlags.Flags) *Config {
+	log.Printf("NEW. flags: %+v\n", flags)
+
 	config := _init(flags)
+	if config.ErrorLoad != nil {
+		return config
+	}
+
+	log.Printf("NEW. config.flags: %+v\n", config.flags)
 
 	if config.flags.ConfFile != "" {
 		config.configFile = config.flags.ConfFile
@@ -101,23 +108,21 @@ func _init(flags *ReadFlags.Flags) *Config {
 	return &config
 }
 
+func (config *Config) NextConfigId() {
+}
+
 func (config *Config) GetHttpData() (*Server, error) {
-
-	log.Printf("GetHttpData. config.ServerID: %s\n", config.ServerID)
-	log.Printf("GetHttpData. config.ConfigData.Servers: %+v\n", config.ConfigData.Servers)
-
-	for _, d := range *config.ConfigData.Servers {
-		log.Printf("GetHttpData. d: %+v\n", d)
-
-		if config.ServerID == d.ID {
-			return d, nil
-		}
+	if sever, find := config.GetServer(config.ServerID); find {
+		return sever, nil
 	}
 
 	return nil, errors.New("Not found")
 }
 
 func (config *Config) GetConfigDataByte() ([]byte, error) {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
 	data, err := json.Marshal(config.ConfigData)
 
 	if err == nil && len(data) == 0 {
@@ -127,10 +132,19 @@ func (config *Config) GetConfigDataByte() ([]byte, error) {
 	return data, err
 }
 
-func (config *Config) Store() error {
+func (config *Config) UpdateId() {
+	config.mu.Lock()
+	defer config.mu.Unlock()
 
 	n := time.Now()
 	config.ConfigData.ConfigID = int64(n.Unix())*100000 + int64(n.Nanosecond()%100000)
+}
+
+func (config *Config) Store() error {
+	config.UpdateId()
+
+	config.mu.Lock()
+	defer config.mu.Unlock()
 
 	data, err := json.Marshal(config.ConfigData)
 
@@ -142,6 +156,9 @@ func (config *Config) Store() error {
 }
 
 func (config *Config) ScriptStaticDir(d ...string) string {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
 	if len(d) > 0 {
 		config.staticDir = d[0]
 	}
@@ -149,6 +166,9 @@ func (config *Config) ScriptStaticDir(d ...string) string {
 }
 
 func (config *Config) ScriptLogDir(d ...string) string {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
 	if len(d) > 0 {
 		config.scriptLogDir = d[0]
 	}
@@ -156,6 +176,9 @@ func (config *Config) ScriptLogDir(d ...string) string {
 }
 
 func (config *Config) ScriptLogFile(f ...string) string {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
 	if len(f) > 0 {
 		config.scriptLogFile = f[0]
 	}
@@ -167,6 +190,8 @@ func (config *Config) InitNew(data map[string]interface{}) error {
 }
 
 func (config *Config) AddScript(script *CronScript.Script) error {
+	config.mu.Lock()
+	defer config.mu.Unlock()
 
 	config.Scripts[script.ID] = script
 
@@ -174,6 +199,8 @@ func (config *Config) AddScript(script *CronScript.Script) error {
 }
 
 func (config *Config) GetScript(id string) (*CronScript.Script, bool) {
+	config.mu.Lock()
+	defer config.mu.Unlock()
 
 	for keyId, script := range config.Scripts {
 		if keyId == id {
@@ -185,9 +212,10 @@ func (config *Config) GetScript(id string) (*CronScript.Script, bool) {
 }
 
 func (config *Config) GetServer(id string) (*Server, bool) {
+	config.mu.Lock()
+	defer config.mu.Unlock()
 
 	for _, server := range *config.ConfigData.Servers {
-		log.Printf("==========> server : %+v", server)
 		if server.ID == id {
 			return server, true
 		}
@@ -235,7 +263,32 @@ func (config *Config) RaplaceScript(script *CronScript.Script) bool {
 	return find
 }
 
+func (config *Config) RaplaceServer(server *Server) bool {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	find := false
+	list := *config.ConfigData.Servers
+	for i, s := range list {
+		if s.ID == server.ID {
+			list[i] = server
+			find = true
+			break
+		}
+	}
+
+	if !find {
+		list = append(list, server)
+	}
+
+	config.ConfigData.Servers = &list
+
+	return false
+}
+
 func (config *Config) StartNow(t time.Time) []*CronScript.Script {
+	config.mu.Lock()
+	defer config.mu.Unlock()
 
 	out := []*CronScript.Script{}
 
@@ -248,7 +301,39 @@ func (config *Config) StartNow(t time.Time) []*CronScript.Script {
 	return out
 }
 
-func (config *Config) ScriptsList(server_id string) []*CronScript.Script {
+func (config *Config) ScriptsList(server_ids ...string) []*CronScript.Script {
+
+	if len(server_ids) == 0 {
+		return config._scriptsList()
+	}
+
+	out := []*CronScript.Script{}
+	server, find := config.GetServer(server_ids[0])
+	if !find {
+		return out
+	}
+
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	for _, script := range config.Scripts {
+		for _, script_id := range server.Scripts {
+			if script_id == script.ID {
+				out = append(out, script)
+				break
+			}
+		}
+	}
+
+	sort.Sort(CronScript.SortList(out))
+
+	return out
+}
+
+func (config *Config) _scriptsList() []*CronScript.Script {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
 	out := []*CronScript.Script{}
 
 	for _, script := range config.Scripts {

@@ -1,7 +1,7 @@
 package Servers
 
 import (
-	// "BUtils"
+	"BUtils"
 	"Web/Handlers/Common"
 	"fmt"
 	"log"
@@ -13,6 +13,10 @@ import (
 // Update config
 func ConfigUpdate(res http.ResponseWriter, req *http.Request) {
 
+	dataForManager := map[string]interface{}{"body": req.Body}
+
+	mes := Common.ToFromManager("", "config_update", dataForManager)
+	Common.SendJsonMess(res, mes)
 }
 
 // Config returns config
@@ -28,8 +32,6 @@ func All(res http.ResponseWriter, req *http.Request) {
 
 	server_id := string(req.URL.Query().Get("server_id"))
 
-	log.Printf("StatusScript.All. ID: %s", server_id)
-
 	dataForManager := map[string]interface{}{"script_id": server_id}
 
 	mes := Common.ToFromManager("", "server_list", dataForManager)
@@ -39,10 +41,7 @@ func All(res http.ResponseWriter, req *http.Request) {
 // One is handler
 // Returns info about the server
 func One(res http.ResponseWriter, req *http.Request) {
-
 	id := string(req.URL.Query().Get(":id"))
-
-	log.Printf("ServersEdit.One ID: %s", id)
 
 	if id == "" {
 		err := fmt.Errorf("Server's %s is not found", id)
@@ -54,7 +53,48 @@ func One(res http.ResponseWriter, req *http.Request) {
 		"server_id": id,
 	}
 
-	mes := Common.ToFromManager(id, "server/info", dataForManager)
+	mes := Common.ToFromManager(id, "server_info", dataForManager)
+	Common.SendJsonMess(res, mes)
+}
+
+// Save is handler
+func Save(res http.ResponseWriter, req *http.Request) {
+
+	form, err := Common.ParseJsonForm(req)
+	if err != nil {
+		Common.ErrorPage(res, err)
+		return
+	}
+
+	id := BUtils.AnyToString(BUtils.GetPath(form, "id"))
+	ip := BUtils.AnyToString(BUtils.GetPath(form, "ip"))
+	host := BUtils.AnyToString(BUtils.GetPath(form, "host"))
+	port := BUtils.AnyToInt(BUtils.GetPath(form, "port"))
+	is_master := BUtils.AnyToBool(BUtils.GetPath(form, "is_master"))
+
+	/*  Get only selected scripts from full list */
+	scriptsFull := BUtils.AnyToInterfaceArray(BUtils.GetPath(form, "scriptsFull"))
+
+	scripts := []string{}
+	for _, s := range scriptsFull {
+		if BUtils.AnyToBool(BUtils.GetPath(s, "selected")) {
+			id := BUtils.AnyToString(BUtils.GetPath(s, "id"))
+			if id != "" {
+				scripts = append(scripts, id)
+			}
+		}
+	}
+
+	dataForManager := map[string]interface{}{
+		"id":        id,
+		"ip":        ip,
+		"host":      host,
+		"port":      port,
+		"is_master": is_master,
+		"scripts":   scripts,
+	}
+
+	mes := Common.ToFromManager(id, "save_server", dataForManager)
 	Common.SendJsonMess(res, mes)
 }
 

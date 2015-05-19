@@ -29,7 +29,9 @@ func (s *LoaderConfigTestsSuite) TestLoaderConfigLoadRemoutConfig(c *C) {
 	}))
 	defer ts.Close()
 
-	config := Config.New(ReadFlags.New())
+	config := Config.New(ReadFlags.NewTest())
+	c.Assert(config.ErrorLoad, IsNil)
+
 	loader := HTTPLoader.NewHTTPLoader()
 
 	f := NewLoaderConfig(config, loader)
@@ -40,7 +42,9 @@ func (s *LoaderConfigTestsSuite) TestLoaderConfigLoadRemoutConfig(c *C) {
 
 func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadEmptyFile(c *C) {
 
-	config := Config.New(ReadFlags.New())
+	config := Config.New(ReadFlags.NewTest())
+	c.Assert(config.ErrorLoad, IsNil)
+
 	loader := HTTPLoader.NewHTTPLoader()
 
 	f := NewLoaderConfig(config, loader)
@@ -53,7 +57,9 @@ func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadEmptyFile(c *C) {
 
 func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadFile(c *C) {
 
-	config := Config.New(ReadFlags.New())
+	config := Config.New(ReadFlags.NewTest())
+	c.Assert(config.ErrorLoad, IsNil)
+
 	loader := HTTPLoader.NewHTTPLoader()
 
 	f := NewLoaderConfig(config, loader)
@@ -66,7 +72,9 @@ func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadFile(c *C) {
 
 func (s *LoaderConfigTestsSuite) TestLoaderConfigNotLoadEmptyURL(c *C) {
 
-	config := Config.New(ReadFlags.New())
+	config := Config.New(ReadFlags.NewTest())
+	c.Assert(config.ErrorLoad, IsNil)
+
 	loader := HTTPLoader.NewHTTPLoader()
 
 	f := NewLoaderConfig(config, loader)

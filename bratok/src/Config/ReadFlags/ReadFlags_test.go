@@ -24,14 +24,14 @@ func (s *ReadFlagsTestsSuite) TestReadFlagsRead(c *C) {
 	c.Assert(err, NotNil)
 }
 
-func (s *ReadFlagsTestsSuite) TestReadFlagsCheckFlags(c *C) {
+func (s *ReadFlagsTestsSuite) TestReadFlagsCheck(c *C) {
 
 	f := New()
 
-	err := f.CheckFlags()
+	err := f.Check()
 	c.Assert(err, NotNil)
 
 	f.ServerID = "ssss"
-	err = f.CheckFlags()
+	err = f.Check()
 	c.Assert(err, IsNil)
 }

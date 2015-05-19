@@ -68,16 +68,17 @@ func New(config *ConfigHttp.Config) (*Server, error) {
 		"/404":               NotFound.Handler,
 		"/api/test":          Test.Handler,
 		"/api/script/save":   ScriptsEdit.Save,
+		"/api/server/save":   Servers.Save,
 		"/api/server/config": Servers.ConfigUpdate,
 	}
 
 	GET_list := map[string]interface{}{
-		"/404":                   NotFound.Handler,
-		"/api/test":              Test.Handler,
-		"/api/script_list":       ScriptsEdit.All,
-		"/api/script/info":       ScriptsEdit.One,
-		"/api/get/server/config": Servers.Config,
-		"/api/server_list":       Servers.All,
+		"/404":               NotFound.Handler,
+		"/api/test":          Test.Handler,
+		"/api/script_list":   ScriptsEdit.All,
+		"/api/script/info":   ScriptsEdit.One,
+		"/api/server/config": Servers.Config,
+		"/api/server_list":   Servers.All,
 	}
 
 	GET_listID := map[string]interface{}{
@@ -86,6 +87,7 @@ func New(config *ConfigHttp.Config) (*Server, error) {
 		"/api/script/info": ScriptsEdit.One,
 		"/api/server/info": Servers.One,
 		"/api/script/save": ScriptsEdit.Save,
+		"/api/server/save": Servers.Save,
 	}
 
 	PUT_listID := map[string]interface{}{}

@@ -25,18 +25,22 @@ func (manager *Manager) Rules(server *WebServer.Server) {
 			var err error = nil
 
 			switch mes.Type {
+			case "config_update":
+				res, err = manager.updateConfig(mes)
 			case "save_script":
 				res, err = manager.saveScript(mes)
 			case "start_script":
 				err = manager.startScriptById(mes.ID)
 				log.Printf("Live. start_script. %s\n", err)
 				res["status"] = "Try to Start"
-			case "script/log":
+			case "script_log":
 				res = manager.logScriptById(mes.ID)
-			case "script/info":
+			case "script_info":
 				res, err = manager.infoScriptById(mes.ID)
-			case "server/info":
+			case "server_info":
 				res, err = manager.infoServerById(mes.ID)
+			case "save_server":
+				res, err = manager.saveServer(mes)
 			case "scripts_list":
 				res, err = manager.scriptsList(mes)
 			case "server_list":

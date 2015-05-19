@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -46,6 +47,64 @@ func SplitTimeList(list []string) [][]string {
 		out[i] = splitTimeListRegExp.Split(list[i], -1)
 	}
 	return out
+}
+
+func AnyToBool(s interface{}) bool {
+	switch v := s.(type) {
+
+	case bool:
+		return s.(bool)
+	case *bool:
+		return *s.(*bool)
+
+	case string:
+		return s.(string) != ""
+	case *string:
+		return *s.(*string) != ""
+
+	case []string:
+		return len(s.([]string)) > 0
+	case *[]string:
+		return len(*s.(*[]string)) > 0
+
+	case []uint8:
+		raw := s.([]uint8)
+		return string(raw) != ""
+
+	case float64:
+		return s.(float64) != 0.0
+	case *float64:
+		return *s.(*float64) != 0.0
+
+	case int:
+		return s.(int) != 0.0
+	case *int:
+		return *s.(*int) != 0.0
+
+	case int8:
+		return int(s.(int8)) != 0.0
+	case *int8:
+		return int(*s.(*int8)) != 0.0
+
+	case int32:
+		return uint64(s.(int32)) != 0.0
+	case *int32:
+		return uint64(*s.(*int32)) != 0.0
+
+	case int64:
+		return uint64(s.(int64)) != 0.0
+	case *int64:
+		return uint64(*s.(*int64)) != 0.0
+
+	case nil:
+		return false
+
+	default:
+		log.Fatalf("AnyToString. unknown type '%t' => '%s'\v", s, v)
+
+	}
+
+	return false
 }
 
 func AnyToString(s interface{}) string {
@@ -286,9 +345,29 @@ func AnyTo2StringArray(s interface{}) [][]string {
 	return [][]string{}
 }
 
-func AnyToStringArray(s interface{}) []string {
+func AnyToInterfaceArray(s interface{}) []interface{} {
 
-	log.Printf("AnyToStringArray: %T\n", s)
+	if s == nil {
+		return []interface{}{}
+	}
+
+	switch reflect.TypeOf(s).Kind() {
+	case reflect.Slice:
+		v := reflect.ValueOf(s)
+		out := make([]interface{}, v.Len())
+
+		for i := 0; i < v.Len(); i++ {
+			out[i] = v.Index(i).Interface()
+		}
+		return out
+	}
+
+	out := make([]interface{}, 1)
+	out[0] = s
+	return out
+}
+
+func AnyToStringArray(s interface{}) []string {
 
 	switch s.(type) {
 	case string:

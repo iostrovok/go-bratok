@@ -18,7 +18,7 @@ var _ = Suite(&NewWebServerTestsSuite{})
 
 func (s *NewWebServerTestsSuite) TestNewWebServerCanNewNewWebServer(c *C) {
 
-	flags := ReadFlags.New()
+	flags := ReadFlags.NewTest()
 	cronConfig := Config.New(flags)
 	config := ConfigHttp.New(flags, cronConfig)
 	server, err := New(config)

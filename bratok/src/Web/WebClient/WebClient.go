@@ -55,31 +55,27 @@ func (client *Client) _Run() {
 			case "stop":
 				break
 			default:
-				client.WG.Add(1)
 				go client.oneMessage(mes)
 			}
 		}
 	}
-
-	client.WG.Wait()
 }
 
 func (client *Client) oneMessage(mes CronMessage.Mess) {
 	switch mes.Type {
 	case "all_server":
-		// 		ID       string `json:"id"`
-		// IP       string `json:"ip"`
-		// Host     string `json:"host"`
-		// Port     int    `json:"port"`
-		// IsMaster bool   `json:"is_master"`
-
 		servers := client.Config.ServersList()
 		for _, s := range servers {
-			url := fmt.Sprintf("http://%s:%d/api/server/config", s.Host, s.Port)
-			client.WG.Add(1)
+			if client.Config.ServerID != s.ID {
+				continue
+			}
+			host := s.IP
+			if s.Host != "" {
+				host = s.Host
+			}
+			url := fmt.Sprintf("http://%s:%d/api/server/config", host, s.Port)
 			go func(url string, data []byte) {
 				client.SendPost(url, data)
-				client.WG.Done()
 			}(url, mes.Data)
 		}
 		//res, err = manager.saveScript(mes)
@@ -87,7 +83,6 @@ func (client *Client) oneMessage(mes CronMessage.Mess) {
 		//res["status"] = "INTERNAL ERROR"
 		//err = fmt.Errorf("INTERNAL ERROR. NOT FOUND MESSAGE TYPR '%s'", mes.Type)
 	}
-	client.WG.Done()
 }
 
 func (client *Client) SendPost(url string, data []byte) {

@@ -15,8 +15,6 @@ func One(res http.ResponseWriter, req *http.Request) {
 
 	id := string(req.URL.Query().Get(":id"))
 
-	log.Printf("ScriptsEdit.One ID: %s", id)
-
 	if id == "" {
 		err := fmt.Errorf("Script's %s is not found", id)
 		Common.ErrorPage(res, err)
@@ -27,7 +25,7 @@ func One(res http.ResponseWriter, req *http.Request) {
 		"script_id": id,
 	}
 
-	mes := Common.ToFromManager(id, "script/info", dataForManager)
+	mes := Common.ToFromManager(id, "script_info", dataForManager)
 	Common.SendJsonMess(res, mes)
 }
 
@@ -37,8 +35,6 @@ func Log(res http.ResponseWriter, req *http.Request) {
 
 	id := string(req.URL.Query().Get(":id"))
 
-	log.Printf("ScriptsEdit.One ID: %s", id)
-
 	if id == "" {
 		err := fmt.Errorf("Script's %s is not found", id)
 		Common.ErrorPage(res, err)
@@ -49,7 +45,7 @@ func Log(res http.ResponseWriter, req *http.Request) {
 		"script_id": id,
 	}
 
-	mes := Common.ToFromManager(id, "script/log", dataForManager)
+	mes := Common.ToFromManager(id, "script_log", dataForManager)
 	Common.SendJsonMess(res, mes)
 }
 
@@ -58,8 +54,6 @@ func Log(res http.ResponseWriter, req *http.Request) {
 func All(res http.ResponseWriter, req *http.Request) {
 
 	server_id := string(req.URL.Query().Get("server_id"))
-
-	log.Printf("StatusScript.All. ID: %s", server_id)
 
 	dataForManager := map[string]interface{}{"script_id": server_id}
 

@@ -10,19 +10,56 @@ import (
 	"log"
 )
 
-func (manager *Manager) updateConfigAllServers() error {
+func (manager *Manager) StoreConfig() error {
+	// save to file & set new ConfigId
+	if err := manager.config.Store(); err != nil {
+		return err
+	}
+
 	conf, err := manager.config.GetConfigDataByte()
 	if err == nil {
+		// send new config to all servers
 		CronMessage.Send(manager.httpClientChannel, "1", "all_server", conf, nil)
 	}
 	return err
 }
 
+func (manager *Manager) updateConfig(mes CronMessage.Mess) (map[string]interface{}, error) {
+	body := BUtils.GetPath(mes.Hash, "body")
+	log.Printf("updateConfig body: %s\n", body)
+
+	return map[string]interface{}{}, nil
+}
+
+func (manager *Manager) saveServer(mes CronMessage.Mess) (map[string]interface{}, error) {
+	_, err := manager.infoServerById(mes.ID)
+	if err != nil {
+		return map[string]interface{}{}, err
+	}
+
+	serverOld, find := manager.config.GetServer(mes.ID)
+	if !find {
+		return map[string]interface{}{},
+			fmt.Errorf("saveServer. Server [id =  %s] is not found", mes.ID)
+	}
+
+	server := serverOld.Clone()
+
+	server.IP = BUtils.AnyToString(BUtils.GetPath(mes.Hash, "ip"))
+	server.Host = BUtils.AnyToString(BUtils.GetPath(mes.Hash, "host"))
+	server.Port = BUtils.AnyToInt(BUtils.GetPath(mes.Hash, "port"))
+	server.Scripts = BUtils.AnyToStringArray(BUtils.GetPath(mes.Hash, "scripts"))
+	server.IsMaster = BUtils.AnyToBool(BUtils.GetPath(mes.Hash, "is_master"))
+
+	log.Printf("Save/Add server: %s\n", server)
+
+	manager.config.RaplaceServer(server)
+
+	errorStore := manager.StoreConfig()
+	return map[string]interface{}{}, errorStore
+}
+
 func (manager *Manager) saveScript(mes CronMessage.Mess) (map[string]interface{}, error) {
-
-	log.Printf("saveScript. mes: %+v\n", mes)
-
-	// mes.ID - script id
 	_, err := manager.infoScriptById(mes.ID)
 	if err != nil {
 		return map[string]interface{}{}, err
@@ -38,19 +75,11 @@ func (manager *Manager) saveScript(mes CronMessage.Mess) (map[string]interface{}
 
 	times := BUtils.GetPath(mes.Hash, "times")
 
-	log.Printf("saveScript. times. v: %+v\n", times)
-
 	script.CleanTime()
-
-	log.Println("CleanTime. Finish")
 
 	for _, t := range BUtils.AnyTo2StringArray(times) {
 		for i := range t {
-			log.Printf("CleanTime 0: %s\n", t[i])
-
 			t[i] = CronScheduler.CleanTimeLinePoint(t[i])
-			log.Printf("CleanTime 1: %s\n", t[i])
-
 		}
 		if err := script.SetTime(t...); err != nil {
 			return map[string]interface{}{}, err
@@ -61,12 +90,10 @@ func (manager *Manager) saveScript(mes CronMessage.Mess) (map[string]interface{}
 	script.SetEnv(BUtils.AnyToStringArray(BUtils.GetPath(mes.Hash, "env")))
 	script.SetExe(BUtils.AnyToString(BUtils.GetPath(mes.Hash, "exe")))
 
-	log.Printf("Set new script: %s\n", script)
-
 	manager.config.RaplaceScript(script)
-	manager.config.Store()
 
-	return map[string]interface{}{}, manager.updateConfigAllServers()
+	errorStore := manager.StoreConfig()
+	return map[string]interface{}{}, errorStore
 }
 
 func (manager *Manager) scriptsList(mes CronMessage.Mess) (map[string]interface{}, error) {

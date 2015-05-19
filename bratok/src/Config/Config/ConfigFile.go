@@ -8,21 +8,26 @@ import (
 	"strings"
 )
 
+func TestFileLineHttp() []byte {
+	out := `{"error":"","data":` + string(TestFileLine()) + `}`
+	return []byte(out)
+}
+
 func TestFileLine() []byte {
 	return []byte(`{
 			"logfile":"FILE","logdir":"DIR","staticdir":"STATIC-DIR","config_id":12312312,
 			"scripts":[
+				{"id":"ls22","time":["*/1 * * * *"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]},
+				{"id":"ls33","time":["*/1 * * * *"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]},
 				{"id":"ls1","time":["*/1 * * * *"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]},
 				{"id":"ls2","time":["*/2"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]}
 			],
 			"servers":[
-				{"id":"workstation","ip":"127.0.0.1","host":"","port":21222,"is_master":true},
-				{"id":"somethere","ip":"192.168.0.10","host":"wks-l","port":21222,"is_master":false}
+				{"id":"workstation","ip":"127.0.0.1","host":"","port":21222,"is_master":true,"scripts": ["ls2","ls1"]},
+				{"id":"somethere","ip":"192.168.0.10","host":"wks-l","port":21222,"is_master":false,"scripts": ["ls2"]}
 			]
 	}`)
 }
-
-//var TestFileLine []byte = []byte(`{"logfile":"","logdir":"","scripts":[{"id":"ls11231","time":["*","*","*"],"exe":"sh","params":["ls","-a","./]}],"servers":[{"id":"workstation","ip":"127.0.0.1","host":"","port":21222}]}`)
 
 type Script struct {
 	ID     string   `json:"id"`
@@ -59,10 +64,15 @@ type ConfigData struct {
 
 func (config *Config) LoadConfigFileFromLine(data []byte) error {
 
+	log.Printf("LoadConfigFileFromLine data: %s\n", data)
+
 	confData := ConfigDataHttp{}
-	if err := json.Unmarshal(data, &confData); err != nil {
+	err := json.Unmarshal(data, &confData)
+	if err != nil {
 		return err
 	}
+	log.Printf("LoadConfigFileFromLine err: %+v\n", err)
+	log.Printf("LoadConfigFileFromLine confData: %+v\n", confData)
 
 	config.ConfigData = confData.Data
 	return config._postProceecingConfigFile()
@@ -122,6 +132,8 @@ func (config *Config) _parseConfigData(data []byte) error {
 func (config *Config) _loadConfigData() error {
 	cf := config.ConfigData
 
+	log.Printf("_loadConfigData 1: %+v\n", cf)
+
 	if cf.ScriptLogDir != "" {
 		config.scriptLogDir = cf.ScriptLogDir
 	}
@@ -132,7 +144,7 @@ func (config *Config) _loadConfigData() error {
 		config.staticDir = cf.StaticFilesDir
 	}
 
-	log.Printf("cf: %+v\n", cf)
+	log.Printf("_loadConfigData 2: %+v\n", cf)
 
 	if cf.Scripts != nil {
 		for _, scriptJs := range *cf.Scripts {
@@ -165,4 +177,15 @@ func (config *Config) _loadConfigData() error {
 	log.Printf("_loadConfigData: config 2: %+v\n", config)
 
 	return nil
+}
+
+func (server *Server) Clone() *Server {
+	return &Server{
+		ID:       server.ID,
+		IP:       server.IP,
+		Host:     server.Host,
+		Port:     server.Port,
+		IsMaster: server.IsMaster,
+		Scripts:  server.Scripts,
+	}
 }

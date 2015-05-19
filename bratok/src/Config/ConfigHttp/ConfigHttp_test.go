@@ -1,7 +1,7 @@
 package ConfigHttp
 
 import (
-	cronConf "Config/Config"
+	ConfigCron "Config/Config"
 	"Config/ReadFlags"
 	. "gopkg.in/check.v1"
 	"testing"
@@ -17,25 +17,29 @@ var _ = Suite(&ConfigHttpTestsSuite{})
 
 func (s *ConfigHttpTestsSuite) TestConfigHttpCanNewHttp(c *C) {
 
-	cronConfig := cronConf.New(ReadFlags.New())
-	config := New(ReadFlags.New(), cronConfig)
+	config := ConfigCron.New(ReadFlags.NewTest())
+	c.Assert(config.ErrorLoad, IsNil)
 
-	c.Assert(config, NotNil)
+	configHttp := New(ReadFlags.NewTest(), config)
+
+	c.Assert(configHttp, NotNil)
 }
 
 func (s *ConfigHttpTestsSuite) TestConfigHttpPort(c *C) {
 
-	cronConfig := cronConf.New(ReadFlags.New())
-	config := New(ReadFlags.New(), cronConfig)
+	config := ConfigCron.New(ReadFlags.NewTest())
+	c.Assert(config.ErrorLoad, IsNil)
 
-	port := config.Port()
+	configHttp := New(ReadFlags.NewTest(), config)
+
+	port := configHttp.Port()
 
 	c.Assert(port, Equals, 21222)
 }
 
 // func (s *ConfigHttpTestsSuite) TestConfigHttpStaticDir(c *C) {
 
-// 	config := New(ReadFlags.New())
+//	config := ConfigCron.New(ReadFlags.NewTest())
 // 	port := config.StaticDir()
 
 // 	c.Assert(port, Equals, "/tmp")

@@ -5,12 +5,20 @@ import (
 	"flag"
 )
 
-/*
-Flags is a structure with all command line flags
-*/
-type FlagsBase interface {
-	ReadFlags() error
-	CheckFlags() error
+func NewTest() *Flags {
+	f := Flags{
+		IP:         "127.0.0.1",
+		Port:       21222,
+		Host:       "localhost",
+		ServerID:   "workstation",
+		DebugMode:  true,
+		ConfigHost: "",
+		Path:       "./",
+		//ConfFile:   "./bratok/conf/config.js",
+		ConfFile: "",
+	}
+
+	return &f
 }
 
 /*
@@ -65,11 +73,11 @@ func (f *Flags) Read() error {
 	f.Path = *path
 	f.ConfFile = *confFile
 
-	return f.CheckFlags()
+	return f.Check()
 }
 
 // CheckFlags checks wrong/true flags
-func (f *Flags) CheckFlags() error {
+func (f *Flags) Check() error {
 
 	if f.ServerID == "" {
 		return errors.New("No defined server ID")
