@@ -53,7 +53,7 @@ func (manager *Manager) saveServer(mes CronMessage.Mess) (map[string]interface{}
 
 	log.Printf("Save/Add server: %s\n", server)
 
-	manager.config.RaplaceServer(server)
+	manager.config.ReplaceServer(server)
 
 	errorStore := manager.StoreConfig()
 	return map[string]interface{}{}, errorStore
@@ -90,7 +90,7 @@ func (manager *Manager) saveScript(mes CronMessage.Mess) (map[string]interface{}
 	script.SetEnv(BUtils.AnyToStringArray(BUtils.GetPath(mes.Hash, "env")))
 	script.SetExe(BUtils.AnyToString(BUtils.GetPath(mes.Hash, "exe")))
 
-	manager.config.RaplaceScript(script)
+	manager.config.ReplaceScript(script)
 
 	errorStore := manager.StoreConfig()
 	return map[string]interface{}{}, errorStore

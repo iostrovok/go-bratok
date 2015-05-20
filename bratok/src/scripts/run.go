@@ -69,11 +69,7 @@ func main() {
 		log.Panicf("%s", errWebClient)
 	}
 
-	// /* TEST POINT START */
-	// script := CronScript.New("fromRun", "ls", "-a", "-r", "/")
-	// script.SetTime("*/1", "*", "*", "*", "*")
-	// cronConfig.AddScript(script)
-	// /* TEST POINT FINISH */
+	fmt.Printf("------> cronConfig.ScriptLogFile(): %s\n", cronConfig.ScriptLogFile())
 
 	manager := Manager.New(cronConfig)
 	manager.SetLogger(logger)

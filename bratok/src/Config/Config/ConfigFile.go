@@ -38,12 +38,15 @@ type Script struct {
 }
 
 type Server struct {
-	ID       string   `json:"id"`
-	IP       string   `json:"ip"`
-	Host     string   `json:"host"`
-	Port     int      `json:"port"`
-	IsMaster bool     `json:"is_master"`
-	Scripts  []string `json:"scripts"`
+	ID             string   `json:"id"`
+	IP             string   `json:"ip"`
+	Host           string   `json:"host"`
+	Port           int      `json:"port"`
+	IsMaster       bool     `json:"is_master"`
+	Scripts        []string `json:"scripts"`
+	StaticFilesDir string   `json:"staticdir"`
+	ScriptLogFile  string   `json:"logfile"`
+	ScriptLogDir   string   `json:"logdir"`
 }
 
 /* Data from config file */
@@ -148,35 +151,22 @@ func (config *Config) _loadConfigData() error {
 
 	if cf.Scripts != nil {
 		for _, scriptJs := range *cf.Scripts {
-			script := CronScript.New(scriptJs.ID, scriptJs.Exe, scriptJs.Params...)
-			script.SetEnv(scriptJs.Evn)
-			for _, oneTime := range scriptJs.Time {
-				//Evn    []string `json:"env"`
-
-				times := strings.Split(oneTime, " ")
-				log.Printf("times v: %+v\n", times)
-				log.Printf("times T: %T\n", times)
-				log.Printf("times s: %s\n", times)
-				log.Printf("times len(times): %d\n", len(times))
-
-				script.SetTime(times...)
-
-			}
-
-			log.Printf("script: %+v\n", script)
-			config.AddScript(script)
+			config.SetCronScript(scriptJs)
 		}
 	}
 
-	// type ConfigData struct {
-	// 	Scripts       *[]Script `json:"scripts"`
-	// 	Servers       *[]Server `json:"servers"`
-	// 	ScriptLogDir  string    `json:"logdir"`
-	// 	 string    `json:"logfile"`
-
-	log.Printf("_loadConfigData: config 2: %+v\n", config)
-
 	return nil
+}
+
+func (config *Config) SetCronScript(scriptJs *Script) {
+	script := CronScript.New(scriptJs.ID, scriptJs.Exe, scriptJs.Params...)
+	script.SetEnv(scriptJs.Evn)
+	for _, oneTime := range scriptJs.Time {
+		times := strings.Split(oneTime, " ")
+		script.SetTime(times...)
+	}
+
+	config.AddCronScript(script)
 }
 
 func (server *Server) Clone() *Server {

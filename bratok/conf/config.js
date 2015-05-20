@@ -35,13 +35,16 @@
         "host": "",
         "port": 21223,
         "is_master": false,
-        "scripts": ["ls1" ]
+        "scripts": ["ls1" ],
+        "logfile": "bratok.scripts-second.log"
     }, {
         "id": "third",
         "ip": "127.0.0.1",
         "host": "",
         "port": 21224,
         "is_master": false,
-        "scripts": ["ls2"]
+        "scripts": ["ls2"],
+        "logfile": "bratok.scripts-third.log",
+        "logdir": "/tmp/third/"
     }]
 }

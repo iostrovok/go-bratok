@@ -90,7 +90,7 @@ func (client *Client) SendPost(url string, data []byte) {
 }
 
 func LoadRemoutConfig(host string) ([]byte, error) {
-	url := host + "/api/get/server/config"
+	url := host + "/api/server/config"
 	log.Printf("LoadUrl: %s\n", url)
 	resp, err := http.Get(url)
 	if err != nil {

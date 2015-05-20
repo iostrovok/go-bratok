@@ -73,6 +73,10 @@ func New(flags *ReadFlags.Flags) *Config {
 	return config
 }
 
+func (config *Config) ID() int64 {
+	return config.ConfigData.ConfigID
+}
+
 func (config *Config) _postInit() {
 
 	config.autoConfigFile = config.configFile + ".auto.js"
@@ -177,23 +181,34 @@ func (config *Config) ScriptLogDir(d ...string) string {
 
 func (config *Config) ScriptLogFile(f ...string) string {
 	config.mu.Lock()
-	defer config.mu.Unlock()
 
 	if len(f) > 0 {
 		config.scriptLogFile = f[0]
 	}
-	return config.scriptLogDir + config.scriptLogFile
+
+	out := config.scriptLogDir + config.scriptLogFile
+	config.mu.Unlock()
+
+	if httpConfig, err := config.GetHttpData(); err == nil {
+		if httpConfig.ScriptLogFile != "" {
+			out = config.scriptLogDir + httpConfig.ScriptLogFile
+		}
+	}
+
+	return out
 }
 
 func (config *Config) InitNew(data map[string]interface{}) error {
 	return nil
 }
 
-func (config *Config) AddScript(script *CronScript.Script) error {
+func (config *Config) AddCronScript(script *CronScript.Script) error {
 	config.mu.Lock()
 	defer config.mu.Unlock()
 
-	config.Scripts[script.ID] = script
+	if _, find := config.Scripts[script.ID]; !find {
+		config.Scripts[script.ID] = script
+	}
 
 	return nil
 }
@@ -224,9 +239,8 @@ func (config *Config) GetServer(id string) (*Server, bool) {
 	return nil, false
 }
 
-func (config *Config) RaplaceScript(script *CronScript.Script) bool {
+func (config *Config) ReplaceScript(script *CronScript.Script) bool {
 	config.mu.Lock()
-	defer config.mu.Unlock()
 
 	for keyId := range config.Scripts {
 		if keyId == script.ID {
@@ -260,10 +274,14 @@ func (config *Config) RaplaceScript(script *CronScript.Script) bool {
 
 	config.ConfigData.Scripts = &list
 
+	// SetCronScript blocks too, so we stop blocking
+	config.mu.Unlock()
+	config.SetCronScript(fdata)
+
 	return find
 }
 
-func (config *Config) RaplaceServer(server *Server) bool {
+func (config *Config) ReplaceServer(server *Server) bool {
 	config.mu.Lock()
 	defer config.mu.Unlock()
 
@@ -283,7 +301,7 @@ func (config *Config) RaplaceServer(server *Server) bool {
 
 	config.ConfigData.Servers = &list
 
-	return false
+	return find
 }
 
 func (config *Config) StartNow(t time.Time) []*CronScript.Script {
@@ -303,12 +321,17 @@ func (config *Config) StartNow(t time.Time) []*CronScript.Script {
 
 func (config *Config) ScriptsList(server_ids ...string) []*CronScript.Script {
 
-	if len(server_ids) == 0 {
+	serverId := ""
+	if len(server_ids) > 0 {
+		serverId = server_ids[0]
+	}
+
+	if serverId == "" {
 		return config._scriptsList()
 	}
 
 	out := []*CronScript.Script{}
-	server, find := config.GetServer(server_ids[0])
+	server, find := config.GetServer(serverId)
 	if !find {
 		return out
 	}
@@ -341,6 +364,8 @@ func (config *Config) _scriptsList() []*CronScript.Script {
 	}
 
 	sort.Sort(CronScript.SortList(out))
+
+	log.Printf("_scriptsList: %+v\n", out)
 
 	return out
 }

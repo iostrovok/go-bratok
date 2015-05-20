@@ -31,7 +31,7 @@ func (s *ManagerTestsSuite) TestManagerReadData(c *C) {
 	script.SetTime("*/1", "*", "*", "*", "*")
 
 	config := Config.New(ReadFlags.New())
-	config.AddScript(script)
+	config.AddCronScript(script)
 
 	manager := New(config)
 
@@ -50,9 +50,9 @@ func (s *ManagerTestsSuite) TestManagerTimerAction(c *C) {
 	script3.SetTime("1", "1", "1", "1", "1")
 
 	config := Config.New(ReadFlags.New())
-	config.AddScript(script)
-	config.AddScript(script2)
-	config.AddScript(script3)
+	config.AddCronScript(script)
+	config.AddCronScript(script2)
+	config.AddCronScript(script3)
 
 	d, err := time.ParseDuration("5m")
 	c.Assert(err, IsNil)

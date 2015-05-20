@@ -55,6 +55,7 @@ func (manager *Manager) Rules(server *WebServer.Server) {
 				log.Printf("MANAGER ERROR: %s\n", err)
 			}
 			if mes.BackChannel != nil {
+				res["config_id"] = manager.config.ID()
 				CronMessage.SendHash(mes.BackChannel, mes.ID, mes.Type, res, err)
 				close(mes.BackChannel)
 			}
