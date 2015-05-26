@@ -3,6 +3,7 @@ package Common
 import (
 	"Config/Config"
 	"Config/ConfigHttp"
+	"Config/File"
 	"Cron/CronMessage"
 	"encoding/json"
 	//"errors"
@@ -20,7 +21,7 @@ func SetCronConfig(c *Config.Config) {
 func GetCronConfig() *Config.Config {
 	return myConfig
 }
-func GetConfigData() *Config.ConfigData {
+func GetConfigData() *File.File {
 	return myConfig.ConfigData
 }
 

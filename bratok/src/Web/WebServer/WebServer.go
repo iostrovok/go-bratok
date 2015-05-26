@@ -77,7 +77,7 @@ func New(config *ConfigHttp.Config) (*Server, error) {
 		"/api/test":          Test.Handler,
 		"/api/script_list":   ScriptsEdit.All,
 		"/api/script/info":   ScriptsEdit.One,
-		"/api/server/config": Servers.Config,
+		"/api/server/config": Servers.GetConfig,
 		"/api/server_list":   Servers.All,
 	}
 

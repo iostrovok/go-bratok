@@ -2,13 +2,13 @@ package Config
 
 import (
 	"Config/CronScript"
+	"Config/File"
 	"Config/ReadFlags"
-	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"log"
+	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,9 +31,26 @@ type Config struct {
 	useAutoConfig  bool
 	staticDir      string
 	flags          *ReadFlags.Flags
-	ConfigData     *ConfigData
+	ConfigData     *File.File
 	ErrorLoad      error
 	mu             *sync.Mutex
+}
+
+func New(flags *ReadFlags.Flags) *Config {
+
+	config := _init(flags)
+	if config.ErrorLoad != nil {
+		return config
+	}
+
+	if config.flags.ConfFile != "" {
+		config.configFile = config.flags.ConfFile
+	}
+
+	config._postInit()
+	config.ErrorLoad = config.LoadConfigFile()
+
+	return config
 }
 
 func NewFromRemout(flags *ReadFlags.Flags, RemoutConfig []byte) (*Config, error) {
@@ -48,33 +65,72 @@ func NewFromRemout(flags *ReadFlags.Flags, RemoutConfig []byte) (*Config, error)
 	}
 
 	config._postInit()
-	res := config.LoadConfigFileFromLine(RemoutConfig)
-
+	res := config.FromLine(RemoutConfig)
 	return config, res
 }
 
-func New(flags *ReadFlags.Flags) *Config {
-	log.Printf("NEW. flags: %+v\n", flags)
+func (config *Config) LoadHTTPLine(data []byte) error {
 
-	config := _init(flags)
-	if config.ErrorLoad != nil {
-		return config
+	err := config.ConfigData.LoadHTTPLine(data)
+	if err != nil {
+		return err
 	}
 
-	log.Printf("NEW. config.flags: %+v\n", config.flags)
+	return config._loadConfigData()
+}
 
-	if config.flags.ConfFile != "" {
-		config.configFile = config.flags.ConfFile
+func (config *Config) FromLine(RemoutConfig []byte) error {
+
+	if err := config.ConfigData.FromLine(RemoutConfig); err != nil {
+		return err
+
 	}
 
-	config._postInit()
-	config.ErrorLoad = config.LoadConfigFile()
+	return config._loadConfigData()
+}
 
-	return config
+func (config *Config) _loadConfigData() error {
+	cd := config.ConfigData
+
+	if cd.ScriptLogDir() != "" {
+		config.scriptLogDir = cd.ScriptLogDir()
+	}
+	if cd.ScriptLogFile() != "" {
+		config.scriptLogFile = cd.ScriptLogFile()
+	}
+	if cd.StaticFilesDir() != "" {
+		config.staticDir = cd.StaticFilesDir()
+	}
+
+	if scripts := cd.ListScript(); len(scripts) > 0 {
+		for _, scriptJs := range scripts {
+			sc := config.InitCronScript(scriptJs)
+			config.AddCronScript(sc)
+		}
+	}
+
+	return nil
+}
+
+func (config *Config) LoadConfigFile() error {
+	// then config file settings
+
+	if res := config.ConfigData.SetAutoConfig(config.useAutoConfig, config.autoConfigFile); res != nil {
+		return res
+	}
+	if res := config.ConfigData.LoadFile(); res != nil {
+		return res
+	}
+
+	return config._loadConfigData()
+}
+
+func Upadte() {
+
 }
 
 func (config *Config) ID() int64 {
-	return config.ConfigData.ConfigID
+	return config.ConfigData.ConfigID()
 }
 
 func (config *Config) _postInit() {
@@ -112,88 +168,107 @@ func _init(flags *ReadFlags.Flags) *Config {
 	return &config
 }
 
+func (config *Config) _checkConfigData() {
+	if config.ConfigData == nil {
+		config.ConfigData = File.New(config.ServerID, config.configFile)
+	}
+}
+
 func (config *Config) NextConfigId() {
 }
 
-func (config *Config) GetHttpData() (*Server, error) {
+func (config *Config) GetHTTPData() (*File.Server, error) {
 	if sever, find := config.GetServer(config.ServerID); find {
 		return sever, nil
 	}
 
-	return nil, errors.New("Not found")
+	return nil, fmt.Errorf("GetHTTPData. Not found server for %s", config.ServerID)
 }
 
 func (config *Config) GetConfigDataByte() ([]byte, error) {
-	config.mu.Lock()
-	defer config.mu.Unlock()
-
-	data, err := json.Marshal(config.ConfigData)
-
-	if err == nil && len(data) == 0 {
-		err = errors.New("Empty config data")
-	}
-
-	return data, err
+	return config.ConfigData.Byte()
 }
 
-func (config *Config) UpdateId() {
-	config.mu.Lock()
-	defer config.mu.Unlock()
+// func (config *Config) GetConfigDataByte() ([]byte, error) {
+// 	config.mu.Lock()
+// 	defer config.mu.Unlock()
 
-	n := time.Now()
-	config.ConfigData.ConfigID = int64(n.Unix())*100000 + int64(n.Nanosecond()%100000)
+// 	data, err := json.Marshal(config.ConfigData)
+
+// 	if err == nil && len(data) == 0 {
+// 		err = errors.New("Empty config data")
+// 	}
+
+// 	return data, err
+// }
+
+func (config *Config) Store(noUpdateIds ...bool) error {
+	return config.ConfigData.Store(noUpdateIds...)
 }
 
-func (config *Config) Store() error {
-	config.UpdateId()
+// func (config *Config) Store(noUpdateIds ...bool) error {
 
-	config.mu.Lock()
-	defer config.mu.Unlock()
+// 	noUpdateId := false
+// 	if len(noUpdateIds) > 0 {
+// 		noUpdateId = noUpdateIds[0]
+// 	}
 
-	data, err := json.Marshal(config.ConfigData)
+// 	if !noUpdateId {
+// 		config.UpdateId()
+// 	}
 
-	if err != nil {
-		return err
-	}
+// 	config.mu.Lock()
+// 	defer config.mu.Unlock()
 
-	return ioutil.WriteFile(config.autoConfigFile, data, 0644)
-}
+// 	data, err := json.Marshal(config.ConfigData)
+
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	return ioutil.WriteFile(config.autoConfigFile, data, 0644)
+// }
 
 func (config *Config) ScriptStaticDir(d ...string) string {
-	config.mu.Lock()
-	defer config.mu.Unlock()
+	// config.mu.Lock()
+	// defer config.mu.Unlock()
 
-	if len(d) > 0 {
-		config.staticDir = d[0]
-	}
+	// if len(d) > 0 {
+	// 	config.staticDir = d[0]
+	// }
 	return config.staticDir
 }
 
 func (config *Config) ScriptLogDir(d ...string) string {
-	config.mu.Lock()
-	defer config.mu.Unlock()
+	// config.mu.Lock()
+	// defer config.mu.Unlock()
 
-	if len(d) > 0 {
-		config.scriptLogDir = d[0]
-	}
+	// if len(d) > 0 {
+	// 	config.scriptLogDir = d[0]
+	// }
 	return config.scriptLogDir
 }
 
 func (config *Config) ScriptLogFile(f ...string) string {
-	config.mu.Lock()
+	// config.mu.Lock()
 
-	if len(f) > 0 {
-		config.scriptLogFile = f[0]
+	// if len(f) > 0 {
+	// 	config.scriptLogFile = f[0]
+	// }
+
+	j := ""
+	if last := len(config.scriptLogDir) - 1; last >= 0 && config.scriptLogDir[last] != '/' {
+		j = "/"
 	}
 
-	out := config.scriptLogDir + config.scriptLogFile
-	config.mu.Unlock()
+	out := config.scriptLogDir + j + config.scriptLogFile
+	// config.mu.Unlock()
 
-	if httpConfig, err := config.GetHttpData(); err == nil {
-		if httpConfig.ScriptLogFile != "" {
-			out = config.scriptLogDir + httpConfig.ScriptLogFile
-		}
-	}
+	// if httpConfig, err := config.GetHTTPData(); err == nil {
+	// 	if httpConfig.ScriptLogFile != "" {
+	// 		out = config.scriptLogDir + httpConfig.ScriptLogFile
+	// 	}
+	// }
 
 	return out
 }
@@ -202,15 +277,66 @@ func (config *Config) InitNew(data map[string]interface{}) error {
 	return nil
 }
 
+func (config *Config) InitCronScript(scriptJs *File.Script) *CronScript.Script {
+	script := CronScript.New(scriptJs.ID, scriptJs.Exe, scriptJs.Params...)
+	script.SetEnv(scriptJs.Evn)
+	for _, oneTime := range scriptJs.Time {
+		times := strings.Split(oneTime, " ")
+		script.SetTime(times...)
+	}
+
+	return script
+}
+
 func (config *Config) AddCronScript(script *CronScript.Script) error {
 	config.mu.Lock()
 	defer config.mu.Unlock()
+	return config.AddCronScriptNonLock(script)
+}
+
+func (config *Config) AddCronScriptNonLock(script *CronScript.Script) error {
 
 	if _, find := config.Scripts[script.ID]; !find {
 		config.Scripts[script.ID] = script
 	}
 
 	return nil
+}
+
+func (config *Config) CheckDeletedScript(script_id string) {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	script, find := config.Scripts[script_id]
+	if !find {
+		return
+	}
+
+	if !script.IsDeleted {
+		return
+	}
+
+	if script.IsWork {
+		return
+	}
+
+	delete(config.Scripts, script_id)
+}
+
+func (config *Config) RemoveCronScript(script_id string) {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+
+	script, find := config.Scripts[script_id]
+	if !find {
+		return
+	}
+	if script.IsWork {
+		script.IsDeleted = true
+		return
+	}
+
+	delete(config.Scripts, script_id)
 }
 
 func (config *Config) GetScript(id string) (*CronScript.Script, bool) {
@@ -226,32 +352,33 @@ func (config *Config) GetScript(id string) (*CronScript.Script, bool) {
 	return nil, false
 }
 
-func (config *Config) GetServer(id string) (*Server, bool) {
-	config.mu.Lock()
-	defer config.mu.Unlock()
-
-	for _, server := range *config.ConfigData.Servers {
-		if server.ID == id {
-			return server, true
-		}
-	}
-
-	return nil, false
+func (config *Config) GetServer(id string) (*File.Server, bool) {
+	return config.ConfigData.FindServer(id)
 }
 
 func (config *Config) ReplaceScript(script *CronScript.Script) bool {
 	config.mu.Lock()
+	defer config.mu.Unlock()
 
-	for keyId := range config.Scripts {
+	findExe := false
+
+	// Update exists script
+	for keyId, oldScript := range config.Scripts {
 		if keyId == script.ID {
-			config.Scripts[keyId] = script
+
+			oldScript.Update(script)
+			config.Scripts[keyId] = oldScript
+
+			findExe = true
 			break
 		}
 	}
 
-	find := false
+	if !findExe {
+		config.AddCronScriptNonLock(script)
+	}
 
-	fdata := &Script{
+	fdata := &File.Script{
 		ID:     script.ID,
 		Time:   script.TimeStr,
 		Exe:    script.Exe,
@@ -259,49 +386,14 @@ func (config *Config) ReplaceScript(script *CronScript.Script) bool {
 		Evn:    script.Env,
 	}
 
-	list := *config.ConfigData.Scripts
-	for i, sc := range list {
-		if sc.ID == script.ID {
-			list[i] = fdata
-			find = true
-			break
-		}
-	}
-
-	if !find {
-		list = append(list, fdata)
-	}
-
-	config.ConfigData.Scripts = &list
-
-	// SetCronScript blocks too, so we stop blocking
-	config.mu.Unlock()
-	config.SetCronScript(fdata)
-
-	return find
+	return config.ConfigData.SetScript(fdata)
 }
 
-func (config *Config) ReplaceServer(server *Server) bool {
+func (config *Config) ReplaceServer(server *File.Server) bool {
 	config.mu.Lock()
 	defer config.mu.Unlock()
 
-	find := false
-	list := *config.ConfigData.Servers
-	for i, s := range list {
-		if s.ID == server.ID {
-			list[i] = server
-			find = true
-			break
-		}
-	}
-
-	if !find {
-		list = append(list, server)
-	}
-
-	config.ConfigData.Servers = &list
-
-	return find
+	return config.ConfigData.SetServer(server)
 }
 
 func (config *Config) StartNow(t time.Time) []*CronScript.Script {
@@ -365,11 +457,9 @@ func (config *Config) _scriptsList() []*CronScript.Script {
 
 	sort.Sort(CronScript.SortList(out))
 
-	log.Printf("_scriptsList: %+v\n", out)
-
 	return out
 }
 
-func (config *Config) ServersList() []*Server {
-	return *config.ConfigData.Servers
+func (config *Config) ServersList() []*File.Server {
+	return config.ConfigData.ListServer()
 }

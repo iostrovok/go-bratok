@@ -5,12 +5,18 @@ import (
 	"flag"
 )
 
-func NewTest() *Flags {
+func NewTest(server_ids ...string) *Flags {
+
+	server_id := "workstation"
+	if len(server_ids) > 0 {
+		server_id = server_ids[0]
+	}
+
 	f := Flags{
 		IP:         "127.0.0.1",
 		Port:       21222,
 		Host:       "localhost",
-		ServerID:   "workstation",
+		ServerID:   server_id,
 		DebugMode:  true,
 		ConfigHost: "",
 		Path:       "./",

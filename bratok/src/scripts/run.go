@@ -44,6 +44,9 @@ func main() {
 		}
 	} else {
 		cronConfig = Config.New(flags)
+		fmt.Printf("cronConfig: %+v\n", cronConfig)
+		fmt.Printf("cronConfig.ConfigData: %+v\n", cronConfig.ConfigData)
+		//os.Exit(0)
 	}
 
 	if cronConfig.ErrorLoad != nil {

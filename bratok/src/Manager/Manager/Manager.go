@@ -160,6 +160,10 @@ func (manager *Manager) finishScript(id string) error {
 	//manager.History = append(manager.History, &h)
 	manager.SaveResult()
 
+	// We're waiting for running script.
+	// If the script was marked as deleted, check it now
+	manager.config.CheckDeletedScript(id)
+
 	return nil
 }
 

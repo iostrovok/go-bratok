@@ -2,8 +2,13 @@ package Servers
 
 import (
 	"BUtils"
+	//"Config/Config"
+	//"Config/File"
 	"Web/Handlers/Common"
+
+	//"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -13,14 +18,23 @@ import (
 // Update config
 func ConfigUpdate(res http.ResponseWriter, req *http.Request) {
 
-	dataForManager := map[string]interface{}{"body": req.Body}
+	log.Printf("ConfigUpdate data: %s\n", req.Body)
+
+	defer req.Body.Close()
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		Common.ErrorPage(res, err)
+		return
+	}
+
+	dataForManager := map[string]interface{}{"body": body}
 
 	mes := Common.ToFromManager("", "config_update", dataForManager)
 	Common.SendJsonMess(res, mes)
 }
 
 // Config returns config
-func Config(res http.ResponseWriter, req *http.Request) {
+func GetConfig(res http.ResponseWriter, req *http.Request) {
 	conf := Common.GetConfigData()
 	log.Printf("Servers. Config: %s\n ", conf)
 	Common.SendJsonSuccess(res, conf)

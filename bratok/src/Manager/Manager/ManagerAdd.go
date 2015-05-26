@@ -5,8 +5,6 @@ import (
 	"Config/CronScheduler"
 	"Cron/CronMessage"
 	"fmt"
-)
-import (
 	"log"
 )
 
@@ -28,7 +26,15 @@ func (manager *Manager) updateConfig(mes CronMessage.Mess) (map[string]interface
 	body := BUtils.GetPath(mes.Hash, "body")
 	log.Printf("updateConfig body: %s\n", body)
 
-	return map[string]interface{}{}, nil
+	var err error
+	if s, f := body.([]byte); f {
+		err = manager.config.FullUpdate(s)
+	} else {
+		err = fmt.Errorf("cannot use body (type interface {}) as type []byte in argument to manager.config.FullUpdate: need type assertion")
+	}
+	return map[string]interface{}{
+		"error": err,
+	}, nil
 }
 
 func (manager *Manager) saveServer(mes CronMessage.Mess) (map[string]interface{}, error) {

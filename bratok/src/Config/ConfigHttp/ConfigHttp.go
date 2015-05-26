@@ -43,17 +43,25 @@ func New(flags *ReadFlags.Flags, cronConf *cronConf.Config) *Config {
 	}
 
 	/* Reads data from config file */
-	if data, err := cronConf.GetHttpData(); err == nil {
-		log.Printf("cronConf.GetHttpData. data: %+v\n", data)
+	// log.Printf("\n\ncronConf.GetHTTPData. cronConf: %+v\n", cronConf)
+	// log.Printf("\n\ncronConf.GetHTTPData. cronConf.ConfigData: %+v\n", cronConf.ConfigData)
+	// log.Printf("\n\ncronConf.GetHTTPData. cronConf.ServerID: %s\n", cronConf.ServerID)
+
+	if data, err := cronConf.GetHTTPData(); err == nil {
+		log.Printf("cronConf.GetHTTPData. data: %+v\n", data)
 
 		config._Port = data.Port
 		config._ID = data.ID
 		config._IP = data.IP
 		config._Host = data.Host
 		config._IsMaster = data.IsMaster
+	} else {
+		log.Printf("cronConf.GetHTTPData. cronConf.ConfigData: %+v\n", cronConf.ConfigData)
+		log.Printf("cronConf.GetHTTPData. cronConf.ServersList(): %+v\n", cronConf.ServersList())
+		log.Fatalf("ConfigHttp.New error: %s\n", err)
 	}
 
-	log.Printf("cronConf.GetHttpData. config: %+v\n", config)
+	log.Printf("cronConf.GetHTTPData. config: %+v\n", config)
 
 	/* Re-reads data from command line */
 	if flags.Port > 0 {

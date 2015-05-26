@@ -27,6 +27,10 @@ type Script struct {
 	IsWork     bool                       `json:"is_work"`
 	NextStart  *time.Time                 `json:"next_start"`
 	Env        []string                   `json:"env"`
+
+	// If IsDeleted is set to true
+	// we have to delete the script after it will stoped
+	IsDeleted bool `json:"is_deleted"`
 }
 
 func New(id, exe string, params ...string) *Script {
@@ -39,6 +43,7 @@ func New(id, exe string, params ...string) *Script {
 		LastStart:  time.Now(),
 		LastFinish: time.Now(),
 		IsWork:     false,
+		IsDeleted:  false,
 		Env:        []string{},
 	}
 
@@ -55,10 +60,31 @@ func (script *Script) Clone() *Script {
 		LastStart:  script.LastStart,
 		LastFinish: script.LastFinish,
 		IsWork:     script.IsWork,
+		IsDeleted:  script.IsDeleted,
 		Env:        BUtils.CopyStringsList(script.Env),
 	}
 
 	return &s
+}
+
+func (script *Script) Update(inScript *Script) {
+
+	script.Exe = inScript.Exe
+	script.TimeStr = inScript.TimeStr
+	script.Time = inScript.Time
+	script.Params = inScript.Params
+	script.Env = inScript.Env
+	script.TimeStr = inScript.TimeStr
+	script.IsDeleted = inScript.IsDeleted
+
+	if !script.IsWork {
+
+		if script.LastFinish.Before(time.Now()) {
+			script.LastFinish = time.Now()
+		}
+
+		script.initNextTime(script.LastFinish)
+	}
 }
 
 func (script *Script) CloneScheduler() []*CronScheduler.Scheduler {

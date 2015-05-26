@@ -4,12 +4,12 @@ import (
 	"Config/Config"
 	"Config/ConfigHttp"
 	"Cron/CronMessage"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -23,12 +23,14 @@ DELETE 	| 200 (OK). 404 (Not Found), if ID not found or invalid.
 */
 
 type Client struct {
-	WG         sync.WaitGroup
 	HttpConfig *ConfigHttp.Config
 	Config     *Config.Config
 	ChannelIn  chan CronMessage.Mess
 	CronOut    chan CronMessage.Mess
-	Transport  *http.Transport
+}
+
+type MyClient struct {
+	HTTPClient *http.Client
 }
 
 func (client *Client) Run() {
@@ -66,7 +68,7 @@ func (client *Client) oneMessage(mes CronMessage.Mess) {
 	case "all_server":
 		servers := client.Config.ServersList()
 		for _, s := range servers {
-			if client.Config.ServerID != s.ID {
+			if client.Config.ServerID == s.ID {
 				continue
 			}
 			host := s.IP
@@ -74,8 +76,10 @@ func (client *Client) oneMessage(mes CronMessage.Mess) {
 				host = s.Host
 			}
 			url := fmt.Sprintf("http://%s:%d/api/server/config", host, s.Port)
+
 			go func(url string, data []byte) {
-				client.SendPost(url, data)
+				myClient := initMyClient()
+				myClient.Post(url, data)
 			}(url, mes.Data)
 		}
 		//res, err = manager.saveScript(mes)
@@ -83,10 +87,6 @@ func (client *Client) oneMessage(mes CronMessage.Mess) {
 		//res["status"] = "INTERNAL ERROR"
 		//err = fmt.Errorf("INTERNAL ERROR. NOT FOUND MESSAGE TYPR '%s'", mes.Type)
 	}
-}
-
-func (client *Client) SendPost(url string, data []byte) {
-	log.Printf("SendPost: %s => %s\n", url, data)
 }
 
 func LoadRemoutConfig(host string) ([]byte, error) {
@@ -104,6 +104,36 @@ func New(config *Config.Config, httpConfig *ConfigHttp.Config) (*Client, error) 
 
 	log.Printf("config: %+v\n", config)
 
+	client := &Client{
+		Config:     config,
+		HttpConfig: httpConfig,
+		ChannelIn:  CronMessage.Channel(),
+	}
+
+	return client, nil
+}
+
+func (client *MyClient) Post(url string, data []byte) ([]byte, error) {
+	log.Printf("SendPost 1: %s => %s\n", url, data)
+
+	resp, err := client.HTTPClient.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		return []byte{}, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	log.Printf("SendPost 2: %s => %s\n", url, body)
+
+	return body, nil
+}
+
+func initMyClient() *MyClient {
+
 	var transport *http.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		Dial: (&net.Dialer{
@@ -113,12 +143,11 @@ func New(config *Config.Config, httpConfig *ConfigHttp.Config) (*Client, error) 
 		TLSHandshakeTimeout: 10 * time.Second,
 	}
 
-	client := &Client{
-		Transport:  transport,
-		Config:     config,
-		HttpConfig: httpConfig,
-		ChannelIn:  CronMessage.Channel(),
+	httpClient := &http.Client{Transport: transport}
+
+	client := &MyClient{
+		HTTPClient: httpClient,
 	}
 
-	return client, nil
+	return client
 }
