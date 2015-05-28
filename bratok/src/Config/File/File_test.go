@@ -61,11 +61,13 @@ func (s *ConfigFileTestsSuite) TestConfigFileFindServer(c *C) {
 	file := New("workstation", "configFile")
 	file.FromLine(TestFileLine())
 
-	server := file.FindServer("workstation_asdsdfdasfsdfa")
+	server, find := file.FindServer("workstation_asdsdfdasfsdfa")
 	c.Assert(server, IsNil)
+	c.Assert(find, Equals, false)
 
-	server = file.FindServer("workstation")
+	server, find = file.FindServer("workstation")
 	c.Assert(server, NotNil)
+	c.Assert(find, Equals, true)
 
 }
 
@@ -103,15 +105,15 @@ func (s *ConfigFileTestsSuite) TestConfigFileDirsB(c *C) {
 	c.Assert(file.ScriptLogFile(), Equals, "workstation_FILE")
 }
 
-func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
+func (s *ConfigFileTestsSuite) TestConfigFileUpdateId(c *C) {
 	//c.Skip("Not now")
 
 	file := New("workstation", "configFile")
 	file.FromLine(TestFileLine())
 
-	oldId := file.ConfigID
+	oldId := file.ConfigID()
 	file.UpdateId()
-	newId := file.ConfigID
+	newId := file.ConfigID()
 
 	c.Assert(oldId, Not(Equals), newId)
 
@@ -120,10 +122,130 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 	}
 }
 
+func (s *ConfigFileTestsSuite) TestConfigFileLoadHTTPLine(c *C) {
+	//c.Skip("Not now")
+
+	file := New("workstation", "configFile")
+
+	err := file.LoadHTTPLine(TestFileLineHttp())
+	c.Assert(err, IsNil)
+
+	c.Assert(file.ServerID(), Equals, "workstation")
+	c.Assert(file.ConfigID(), Equals, int64(12312312))
+	c.Assert(file.ScriptLogDir(), Equals, "workstation_DIR")
+	c.Assert(file.StaticFilesDir(), Equals, "workstation_STATIC-DIR")
+	c.Assert(file.ScriptLogFile(), Equals, "workstation_FILE")
+
+}
+
+func (s *ConfigFileTestsSuite) TestConfigFileLoadHTTPLNoServer(c *C) {
+	//c.Skip("Not now")
+
+	file := New("workstation", "configFile")
+
+	err := file.LoadHTTPLine(TestFileLineHttpNoServer())
+	c.Assert(err, NotNil)
+
+}
+
+func (s *ConfigFileTestsSuite) TestConfigFile_checkDefault(c *C) {
+	//c.Skip("Not now")
+
+	file := New("workstation", "configFile")
+	file.Data = Data{}
+
+	err := file._checkDefault()
+	c.Assert(err, IsNil)
+
+	c.Assert(file.Data.Servers, NotNil)
+	c.Assert(len(file.Data.Servers), Equals, 0)
+
+	c.Assert(file.Data.Scripts, NotNil)
+	c.Assert(len(file.Data.Scripts), Equals, 0)
+
+	c.Assert(file.Data.History, NotNil)
+}
+
+func (s *ConfigFileTestsSuite) TestConfigFileList(c *C) {
+	//c.Skip("Not now")
+
+	file := New("workstation", "configFile")
+	file.FromLine(TestFileLine())
+
+	servers := file.ListServer()
+	c.Assert(len(servers), Equals, 2)
+
+	scripts := file.ListScript()
+	c.Assert(len(scripts), Equals, 4)
+}
+
+func (s *ConfigFileTestsSuite) TestConfigFileSetServer(c *C) {
+	//c.Skip("Not now")
+
+	file := New("workstation", "configFile")
+	file.FromLine(TestFileLine())
+
+	// Check data in start
+	c.Assert(file.Data.Servers, NotNil)
+	c.Assert(len(file.Data.Servers), Equals, 2)
+
+	server, _ := file.FindServer("somethere")
+
+	// Step 1 replace
+	server2 := server.Clone()
+	server2.IP = "222.222.222.111"
+	find := file.SetServer(server2)
+	c.Assert(find, Equals, true)
+
+	// Check result
+	c.Assert(file.Data.Servers, NotNil)
+	c.Assert(len(file.Data.Servers), Equals, 2)
+	server, _ = file.FindServer("somethere")
+	c.Assert(server.IP, Equals, "222.222.222.111")
+
+	// Step 2 insert
+	server3 := server.Clone()
+	server3.ID = "new_script_id"
+	find = file.SetServer(server3)
+	c.Assert(find, Equals, false)
+
+	// Check result
+	c.Assert(file.Data.Servers, NotNil)
+	c.Assert(len(file.Data.Servers), Equals, 3)
+	server, _ = file.FindServer("somethere")
+	c.Assert(server.IP, Equals, "222.222.222.111")
+
+}
+
+//SetScript(script *CronScript.Script) bool
+func (s *ConfigFileTestsSuite) TestConfigFileSetScript(c *C) {
+	//c.Skip("Not now")
+
+	file := New("workstation", "configFile")
+	file.FromLine(TestFileLine())
+
+	c.Assert(len(file.Data.Scripts), Equals, 4)
+
+	script, find := file.FindScript("ls1")
+	c.Assert(find, Equals, true)
+	c.Assert(script.Exe, Not(Equals), "SUPER-PUPER-SCRIPT")
+
+	script.Exe = "SUPER-PUPER-SCRIPT"
+
+	isReplace := file.SetScript(script)
+	c.Assert(isReplace, Equals, true)
+	c.Assert(len(file.Data.Scripts), Equals, 4)
+
+	script, find = file.FindScript("ls1")
+	c.Assert(find, Equals, true)
+	c.Assert(script.Exe, Equals, "SUPER-PUPER-SCRIPT")
+
+}
+
 // func (s *ConfigFileTestsSuite) TestConfigFileScriptLogFile(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 
 // 	out := file.ScriptLogFile("my.log")
 // 	c.Assert(out, Equals, "/tmp/my.log")
@@ -132,7 +254,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileCheckInitNew(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 // 	err := file.InitNew(map[string]interface{}{})
 
 // 	c.Assert(err, IsNil)
@@ -142,7 +264,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	//c.Skip("Not now")
 
 // 	script := CronScript.New("1", "ls", "-a", "-r")
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 
 // 	err := file.AddCronScript(script)
 // 	c.Assert(err, IsNil)
@@ -153,17 +275,17 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 
 // 	script1 := CronScript.New("1", "ls", "-a", "-r")
 // 	script2 := CronScript.New("2", "ls", "-a", "-r")
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 
 // 	file.AddCronScript(script1)
 // 	file.AddCronScript(script2)
 
-// 	script, find := file.GetScript("1")
+// 	script, find := file.FindScript("1")
 
 // 	c.Assert(find, Equals, true)
 // 	c.Assert(script, NotNil)
 
-// 	script, find = file.GetScript("34")
+// 	script, find = file.FindScript("34")
 
 // 	c.Assert(find, Equals, false)
 // 	c.Assert(script, IsNil)
@@ -172,7 +294,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileStartNow(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 // 	script := CronScript.New("1", "ls", "-a", "-r")
 // 	script.SetTime("*/1", "*", "*", "*", "*")
 // 	file.AddCronScript(script)
@@ -188,7 +310,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileParseFileData(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 
 // 	err := file._parseFileData(TestConfigFileLine())
 
@@ -200,7 +322,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileLoadFileData(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 
 // 	file._parseFileData(TestConfigFileLine())
 // 	err := file._loadFileData()
@@ -216,7 +338,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileLoadFileData2(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 
 // 	file._parseFileData(TestConfigFileLine())
 // 	err := file._loadFileData()
@@ -230,23 +352,11 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	c.Assert(file.ScriptLogFile("FILE-NEW"), Equals, "DIR-NEW/FILE-NEW")
 // }
 
-// func (s *ConfigFileTestsSuite) TestConfigFileLoadFileFileFromLine(c *C) {
-// 	//c.Skip("Not now")
-
-// 	file := New(ReadFlags.NewTest())
-
-// 	err := file.LoadFileFileFromLine(TestConfigFileLineHttp())
-// 	c.Assert(err, IsNil)
-
-// 	c.Assert(file.ScriptLogDir(), Equals, "DIR")
-// 	c.Assert(file.ScriptLogFile(), Equals, "DIRFILE")
-// }
-
 // func (s *ConfigFileTestsSuite) TestConfigFileGetHttpData(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	p := *file.FileData.Servers
 // 	c.Assert(len(p), Equals, 2)
@@ -262,8 +372,8 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileGetHttpDataError(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	p := []*Server{}
 // 	file.FileData.Servers = &p
@@ -273,12 +383,12 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	c.Assert(server, IsNil)
 // }
 
-// func (s *ConfigFileTestsSuite) TestConfigFileGetServer(c *C) {
+// func (s *ConfigFileTestsSuite) TestConfigFileFindServer(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
-// 	server, find := file.GetServer("somethere")
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
+// 	server, find := file.FindServer("somethere")
 
 // 	c.Assert(find, Equals, true)
 // 	c.Assert(server, NotNil)
@@ -289,8 +399,8 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileScriptsList_1(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 // 	scripts := file.ScriptsList()
 
 // 	c.Assert(len(scripts), Equals, 4)
@@ -299,8 +409,8 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileScriptsList_2(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	scripts := file.ScriptsList("somethere")
 // 	c.Assert(len(scripts), Equals, 1)
@@ -312,8 +422,8 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	oldId := file.FileData.FileID
 // 	file.UpdateId()
@@ -329,8 +439,8 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileGetFileDataByte(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	b, err := file.GetFileDataByte()
 // 	c.Assert(b, NotNil)
@@ -358,7 +468,7 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // func (s *ConfigFileTestsSuite) TestConfigFileServersList(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
+// 	file := New("workstation", "configFile")
 // 	file._parseFileData(TestConfigFileLine())
 
 // 	sList := file.ServersList()
@@ -367,53 +477,24 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	c.Assert(len(sList), Equals, 2)
 // }
 
-// func (s *ConfigFileTestsSuite) TestConfigFileReplaceServer(c *C) {
+// func (s *ConfigFileTestsSuite) TestConfigFileSetServerADD(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	// Check data in start
 // 	sList := file.ServersList()
 // 	c.Assert(sList, NotNil)
 // 	c.Assert(len(sList), Equals, 2)
 
-// 	server, _ := file.GetServer("somethere")
-
-// 	server2 := server.Clone()
-// 	server2.IP = "222.222.222.111"
-
-// 	find := file.ReplaceServer(server2)
-// 	c.Assert(find, Equals, true)
-
-// 	// Check result
-// 	sList = file.ServersList()
-// 	c.Assert(sList, NotNil)
-// 	c.Assert(len(sList), Equals, 2)
-
-// 	server, _ = file.GetServer("somethere")
-// 	c.Assert(server.IP, Equals, "222.222.222.111")
-
-// }
-
-// func (s *ConfigFileTestsSuite) TestConfigFileReplaceServerADD(c *C) {
-// 	//c.Skip("Not now")
-
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
-
-// 	// Check data in start
-// 	sList := file.ServersList()
-// 	c.Assert(sList, NotNil)
-// 	c.Assert(len(sList), Equals, 2)
-
-// 	server, _ := file.GetServer("somethere")
+// 	server, _ := file.FindServer("somethere")
 
 // 	server2 := server.Clone()
 // 	server2.ID = "nothere"
 // 	server2.IP = "222.222.222.111"
 
-// 	find := file.ReplaceServer(server2)
+// 	find := file.SetServer(server2)
 // 	c.Assert(find, Equals, false)
 
 // 	// Check result
@@ -421,49 +502,22 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	c.Assert(sList, NotNil)
 // 	c.Assert(len(sList), Equals, 3)
 
-// 	server, _ = file.GetServer("nothere")
+// 	server, _ = file.FindServer("nothere")
 // 	c.Assert(server.IP, Equals, "222.222.222.111")
 
 // }
 
-// //ReplaceScript(script *CronScript.Script) bool
-// func (s *ConfigFileTestsSuite) TestConfigFileReplaceScript(c *C) {
+// //SetScript(script *CronScript.Script) bool
+// func (s *ConfigFileTestsSuite) TestConfigFileSetScriptADD(c *C) {
 // 	//c.Skip("Not now")
 
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
 // 	list := *file.FileData.Scripts
 // 	c.Assert(len(list), Equals, 4)
 
-// 	script, find := file.GetScript("ls1")
-// 	c.Assert(find, Equals, true)
-// 	c.Assert(script.Exe, Not(Equals), "SUPER-PUPER-SCRIPT")
-
-// 	script.SetExe("SUPER-PUPER-SCRIPT")
-
-// 	isReplace := file.ReplaceScript(script)
-// 	c.Assert(isReplace, Equals, true)
-// 	list = *file.FileData.Scripts
-// 	c.Assert(len(list), Equals, 4)
-
-// 	script, find = file.GetScript("ls1")
-// 	c.Assert(find, Equals, true)
-// 	c.Assert(script.Exe, Equals, "SUPER-PUPER-SCRIPT")
-
-// }
-
-// //ReplaceScript(script *CronScript.Script) bool
-// func (s *ConfigFileTestsSuite) TestConfigFileReplaceScriptADD(c *C) {
-// 	//c.Skip("Not now")
-
-// 	file := New(ReadFlags.NewTest())
-// 	file.LoadFileFileFromLine(TestConfigFileLineHttp())
-
-// 	list := *file.FileData.Scripts
-// 	c.Assert(len(list), Equals, 4)
-
-// 	scriptOld, findOld := file.GetScript("ls1")
+// 	scriptOld, findOld := file.FindScript("ls1")
 // 	c.Assert(findOld, Equals, true)
 // 	c.Assert(scriptOld.Exe, Not(Equals), "SUPER-PUPER-SCRIPT")
 // 	c.Assert(scriptOld.ID, Not(Equals), "SUPER-PUPER-SCRIPT")
@@ -472,13 +526,13 @@ func (s *ConfigTestsSuite) TestConfigFileUpdateId(c *C) {
 // 	scriptNew.ID = "SUPER-PUPER-SCRIPT"
 // 	scriptNew.SetExe("SUPER-PUPER-SCRIPT")
 
-// 	isReplace := file.ReplaceScript(scriptNew)
+// 	isReplace := file.SetScript(scriptNew)
 // 	log.Printf("%+v\n", file.Scripts)
 // 	c.Assert(isReplace, Equals, false)
 // 	list = *file.FileData.Scripts
 // 	c.Assert(len(list), Equals, 5)
 
-// 	script, find := file.GetScript("SUPER-PUPER-SCRIPT")
+// 	script, find := file.FindScript("SUPER-PUPER-SCRIPT")
 // 	c.Assert(find, Equals, true)
 // 	c.Assert(script.Exe, Equals, "SUPER-PUPER-SCRIPT")
 // }

@@ -6,6 +6,7 @@ import (
 	"Config/ReadFlags"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -44,6 +45,7 @@ func New(flags *ReadFlags.Flags) *Config {
 	}
 
 	if config.flags.ConfFile != "" {
+		log.Printf("config load from file %s\n", config.flags.ConfFile)
 		config.configFile = config.flags.ConfFile
 	}
 
@@ -65,11 +67,15 @@ func NewFromRemout(flags *ReadFlags.Flags, RemoutConfig []byte) (*Config, error)
 	}
 
 	config._postInit()
-	res := config.FromLine(RemoutConfig)
-	return config, res
+	err := config.LoadHTTPLine(RemoutConfig)
+	log.Printf("Config.NewFromRemout - config.FromLine: %s\n", err)
+
+	return config, err
 }
 
 func (config *Config) LoadHTTPLine(data []byte) error {
+
+	log.Printf("config - LoadHTTPLine: %s\n-------------------------\n", data)
 
 	err := config.ConfigData.LoadHTTPLine(data)
 	if err != nil {
@@ -83,7 +89,6 @@ func (config *Config) FromLine(RemoutConfig []byte) error {
 
 	if err := config.ConfigData.FromLine(RemoutConfig); err != nil {
 		return err
-
 	}
 
 	return config._loadConfigData()
@@ -140,6 +145,9 @@ func (config *Config) _postInit() {
 		config.useAutoConfig = true
 	}
 
+	if config.ConfigData == nil {
+		config.ConfigData = File.New(config.ServerID, config.configFile)
+	}
 }
 
 func _init(flags *ReadFlags.Flags) *Config {
@@ -163,15 +171,7 @@ func _init(flags *ReadFlags.Flags) *Config {
 	config.ServerID = flags.ServerID
 	config.flags = flags
 
-	config._checkConfigData()
-
 	return &config
-}
-
-func (config *Config) _checkConfigData() {
-	if config.ConfigData == nil {
-		config.ConfigData = File.New(config.ServerID, config.configFile)
-	}
 }
 
 func (config *Config) NextConfigId() {
@@ -203,6 +203,9 @@ func (config *Config) GetConfigDataByte() ([]byte, error) {
 // }
 
 func (config *Config) Store(noUpdateIds ...bool) error {
+
+	log.Printf("Config.Store noUpdateIds: %f\n", noUpdateIds)
+
 	return config.ConfigData.Store(noUpdateIds...)
 }
 

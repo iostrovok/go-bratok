@@ -9,30 +9,6 @@ import (
 	"time"
 )
 
-func TestFileLineHttp() []byte {
-	out := `{"error":"","data":` + string(TestFileLine()) + `}`
-	return []byte(out)
-}
-
-func TestFileLine() []byte {
-	return []byte(`{
-			"logfile":"FILE","logdir":"DIR","staticdir":"STATIC-DIR","file_id":12312312,
-			"scripts":[
-				{"id":"ls22","time":["*/1 * * * *"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]},
-				{"id":"ls33","time":["*/1 * * * *"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]},
-				{"id":"ls1","time":["*/1 * * * *"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]},
-				{"id":"ls2","time":["*/2"],"exe":"sh","params":["ls","-a","-r","./"],"env":[]}
-			],
-			"servers":[
-				{
-					"id":"workstation","ip":"127.0.0.1","host":"","port":21222,"is_master":true,"scripts": ["ls2","ls1"],
-					"logfile":"workstation_FILE","logdir":"workstation_DIR","staticdir":"workstation_STATIC-DIR"
-				},
-				{"id":"somethere","ip":"192.168.0.10","host":"wks-l","port":21223,"is_master":false,"scripts": ["ls2"]}
-			]
-	}`)
-}
-
 type Script struct {
 	ID     string   `json:"id"`
 	Time   []string `json:"time"`
@@ -55,8 +31,9 @@ type Server struct {
 
 /* Data from file file */
 type FileHttp struct {
-	Error string `json:"error"`
-	Data  Data   `json:"data"`
+	Error  string `json:"error"`
+	Data   Data   `json:"data"`
+	Result int    `json:"result"`
 }
 
 /* Data from file file */
@@ -67,7 +44,7 @@ type Data struct {
 	ScriptLogDir   string    `json:"logdir"`
 	ScriptLogFile  string    `json:"logfile"`
 	StaticFilesDir string    `json:"staticdir"`
-	History        *History  `json:"history,omitempty"`
+	History        *History  `json:"history"`
 }
 
 /* Data from file file */
@@ -88,6 +65,12 @@ func New(ServerID, configFile string) *File {
 		Servers: []*Server{},
 	}
 
+	if ServerID == "" {
+		// TODO make error as error :)
+		// Some kind of error
+		return nil
+	}
+
 	return &File{
 		Data:       data,
 		serverID:   ServerID,
@@ -102,6 +85,10 @@ func (file *File) LoadHTTPLine(data []byte) error {
 	err := json.Unmarshal(data, &confData)
 	if err != nil {
 		return err
+	}
+
+	if len(confData.Data.Servers) == 0 {
+		return errors.New("Remout config is empty")
 	}
 
 	file.Data = confData.Data
@@ -153,6 +140,10 @@ func (file *File) FromLine(data []byte) error {
 	if err := file._parseConfigData(data); err != nil {
 		log.Printf("LoadConfigFileFromLine err: %+v\n", err)
 		return err
+	}
+
+	if file.Data.Servers == nil || len(file.Data.Servers) == 0 {
+		return errors.New("Remout config is empty")
 	}
 
 	return file._checkDefault()
@@ -260,6 +251,12 @@ func (file *File) UpdateId() {
 
 func (file *File) Store(noUpdateIds ...bool) error {
 
+	// for i, sc := range file.Data.Scripts {
+	// 	log.Printf("Store: list[%s] => %+v\n", i, sc)
+	// }
+
+	log.Printf("File.Store 1 noUpdateIds: %f\n", noUpdateIds)
+
 	noUpdateId := false
 	if len(noUpdateIds) > 0 {
 		noUpdateId = noUpdateIds[0]
@@ -269,14 +266,20 @@ func (file *File) Store(noUpdateIds ...bool) error {
 		file.UpdateId()
 	}
 
+	log.Printf("File.Store 2-0 file.Data: %+v\n", file.Data)
+	log.Printf("File.Store 2-1 file.Data.History: %+v\n", file.Data.History)
+
 	file.mu.Lock()
 	defer file.mu.Unlock()
 
 	data, err := json.Marshal(file.Data)
+	log.Printf("File.Store 3 err: %s\n", err)
 
 	if err != nil {
 		return err
 	}
+
+	log.Printf("File.Store 4: %s\n", data)
 
 	return ioutil.WriteFile(file.autoConfigFile, data, 0644)
 }
@@ -301,21 +304,19 @@ func (file *File) SetScript(script *Script) bool {
 	file.mu.Lock()
 	defer file.mu.Unlock()
 
-	list := file.Data.Scripts
-
-	for i, sc := range list {
+	for i, sc := range file.Data.Scripts {
 		if sc.ID == script.ID {
-			list[i] = sc
+			file.Data.Scripts[i] = script
 			find = true
+			file.Data.History.Push(nil, script, "replace")
 			break
 		}
 	}
 
 	if !find {
-		list = append(list, script)
+		file.Data.Scripts = append(file.Data.Scripts, script)
+		file.Data.History.Push(nil, script, "add")
 	}
-
-	file.Data.Scripts = list
 
 	return find
 }
@@ -324,18 +325,22 @@ func (file *File) SetServer(server *Server) bool {
 	file.mu.Lock()
 	defer file.mu.Unlock()
 
+	log.Printf("\n\n\nSetServer - server: %+v\n\n\n\n", server)
+
 	find := false
 	list := file.Data.Servers
 	for i, s := range list {
 		if s.ID == server.ID {
 			list[i] = server
 			find = true
+			file.Data.History.Push(server, nil, "replace")
 			break
 		}
 	}
 
 	if !find {
 		list = append(list, server)
+		file.Data.History.Push(server, nil, "add")
 	}
 
 	file.Data.Servers = list

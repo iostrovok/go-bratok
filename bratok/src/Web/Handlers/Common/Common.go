@@ -21,8 +21,8 @@ func SetCronConfig(c *Config.Config) {
 func GetCronConfig() *Config.Config {
 	return myConfig
 }
-func GetConfigData() *File.File {
-	return myConfig.ConfigData
+func GetConfigData() File.Data {
+	return myConfig.ConfigData.Data
 }
 
 func ToHttpLog(str string) {

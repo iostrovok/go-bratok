@@ -31,6 +31,7 @@ func main() {
 
 	/* Do we have to load a remote config? Loading... */
 	if flags.ConfigHost != "" {
+		log.Printf("Load remoute config: %s\n", flags.ConfigHost)
 		RemoutConfig, err := WebClient.LoadRemoutConfig(flags.ConfigHost)
 		if err != nil {
 			fmt.Printf("We have load remout config [%s] error:: %s\n", flags.ConfigHost, err)
@@ -46,6 +47,8 @@ func main() {
 		cronConfig = Config.New(flags)
 		fmt.Printf("cronConfig: %+v\n", cronConfig)
 		fmt.Printf("cronConfig.ConfigData: %+v\n", cronConfig.ConfigData)
+		fmt.Printf("cronConfig.ConfigData.Data: %+v\n", cronConfig.ConfigData.Data)
+		fmt.Printf("cronConfig.ConfigData.Data.Servers: %+v\n", cronConfig.ConfigData.Data.Servers)
 		//os.Exit(0)
 	}
 

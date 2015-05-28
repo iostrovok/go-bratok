@@ -29,10 +29,10 @@ func (s *ConfigFileHistoryTestsSuite) TestConfigFileHistorySetServerID(c *C) {
 	//c.Skip("Not now")
 
 	history := NewHistory("workstation")
-	c.Assert(history.serverID, Equals, "workstation")
+	c.Assert(history.ServerID, Equals, "workstation")
 
 	history.SetServerID("new_workstation")
-	c.Assert(history.serverID, Equals, "new_workstation")
+	c.Assert(history.ServerID, Equals, "new_workstation")
 }
 
 func (s *ConfigFileHistoryTestsSuite) TestConfigFileHistoryPush(c *C) {
@@ -42,10 +42,11 @@ func (s *ConfigFileHistoryTestsSuite) TestConfigFileHistoryPush(c *C) {
 	sc := &Script{}
 
 	history := NewHistory("workstation")
-	err := history.Push(sr, sc)
+	err := history.Push(sr, sc, "add")
+	err = history.Push(sr, sc, "add")
 	c.Assert(err, IsNil)
 
 	history2 := NewHistory("")
-	err = history2.Push(sr, sc)
+	err = history2.Push(sr, sc, "add")
 	c.Assert(err, NotNil)
 }
