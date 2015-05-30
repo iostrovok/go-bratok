@@ -5,8 +5,13 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 	"time"
+)
+
+const (
+	DefaultCofigFile string = "./bratok/conf/config.js"
 )
 
 type Script struct {
@@ -50,7 +55,6 @@ type Data struct {
 /* Data from file file */
 type File struct {
 	autoConfigFile string
-	useAutoConfig  bool
 
 	configFile string
 	Data       Data
@@ -71,12 +75,27 @@ func New(ServerID, configFile string) *File {
 		return nil
 	}
 
-	return &File{
+	if configFile == "" {
+		configFile = DefaultCofigFile
+	}
+
+	file := &File{
 		Data:       data,
 		serverID:   ServerID,
 		configFile: configFile,
 		mu:         &sync.Mutex{},
 	}
+
+	file.SetAutoConfigFile()
+
+	return file
+}
+
+func (file *File) SetAutoConfigFile() {
+	if file.configFile != "" {
+		file.autoConfigFile = file.configFile + "." + file.serverID + ".auto.js"
+	}
+	log.Printf("\n\nSetAutoConfigFile. configFile:%s, autoConfigFile: %s, ", file.configFile, file.autoConfigFile)
 }
 
 func (file *File) LoadHTTPLine(data []byte) error {
@@ -91,39 +110,22 @@ func (file *File) LoadHTTPLine(data []byte) error {
 		return errors.New("Remout config is empty")
 	}
 
+	log.Printf("file *File LoadHTTPLine. file.Data: %v\n", confData.Data)
+
 	file.Data = confData.Data
 	return file._checkDefault()
 }
 
-func (file *File) SetAutoConfig(u bool, f ...string) error {
-
-	if len(f) > 0 {
-		file.autoConfigFile = f[0]
-	}
-
-	if u && file.autoConfigFile != "" {
-		file.useAutoConfig = true
-		return nil
-	}
-
-	if !u {
-		file.useAutoConfig = false
-		return nil
-	}
-
-	return errors.New("Bad option params for AutoConfig")
-}
-
 func (file *File) LoadFile() error {
-	// then file file settings
 
+	// if file file settings
 	f := file.configFile
-	if file.useAutoConfig {
+	if _, err := os.Stat(file.autoConfigFile); err == nil {
 		f = file.autoConfigFile
 	}
 
 	if f == "" {
-		return nil
+		return errors.New("config file not cound\n")
 	}
 
 	data, errReadFile := ioutil.ReadFile(f)
@@ -162,6 +164,8 @@ func (file *File) _checkDefault() error {
 	} else {
 		file.Data.History.SetServerID(file.serverID)
 	}
+
+	file.SetAutoConfigFile()
 
 	return nil
 }
@@ -254,6 +258,10 @@ func (file *File) Store(noUpdateIds ...bool) error {
 	// for i, sc := range file.Data.Scripts {
 	// 	log.Printf("Store: list[%s] => %+v\n", i, sc)
 	// }
+
+	if file.autoConfigFile == "" {
+		return errors.New("No setup config file")
+	}
 
 	log.Printf("File.Store 1 noUpdateIds: %f\n", noUpdateIds)
 

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
+	//"os"
 	"sort"
 	"strings"
 	"sync"
@@ -23,18 +23,16 @@ const (
 )
 
 type Config struct {
-	ServerID       string
-	Scripts        map[string]*CronScript.Script
-	scriptLogDir   string
-	scriptLogFile  string
-	configFile     string
-	autoConfigFile string
-	useAutoConfig  bool
-	staticDir      string
-	flags          *ReadFlags.Flags
-	ConfigData     *File.File
-	ErrorLoad      error
-	mu             *sync.Mutex
+	ServerID      string
+	Scripts       map[string]*CronScript.Script
+	scriptLogDir  string
+	scriptLogFile string
+	configFile    string
+	staticDir     string
+	flags         *ReadFlags.Flags
+	ConfigData    *File.File
+	ErrorLoad     error
+	mu            *sync.Mutex
 }
 
 func New(flags *ReadFlags.Flags) *Config {
@@ -120,9 +118,6 @@ func (config *Config) _loadConfigData() error {
 func (config *Config) LoadConfigFile() error {
 	// then config file settings
 
-	if res := config.ConfigData.SetAutoConfig(config.useAutoConfig, config.autoConfigFile); res != nil {
-		return res
-	}
 	if res := config.ConfigData.LoadFile(); res != nil {
 		return res
 	}
@@ -139,12 +134,6 @@ func (config *Config) ID() int64 {
 }
 
 func (config *Config) _postInit() {
-
-	config.autoConfigFile = config.configFile + ".auto.js"
-	if _, err := os.Stat(config.autoConfigFile); err == nil {
-		config.useAutoConfig = true
-	}
-
 	if config.ConfigData == nil {
 		config.ConfigData = File.New(config.ServerID, config.configFile)
 	}
@@ -189,48 +178,12 @@ func (config *Config) GetConfigDataByte() ([]byte, error) {
 	return config.ConfigData.Byte()
 }
 
-// func (config *Config) GetConfigDataByte() ([]byte, error) {
-// 	config.mu.Lock()
-// 	defer config.mu.Unlock()
-
-// 	data, err := json.Marshal(config.ConfigData)
-
-// 	if err == nil && len(data) == 0 {
-// 		err = errors.New("Empty config data")
-// 	}
-
-// 	return data, err
-// }
-
 func (config *Config) Store(noUpdateIds ...bool) error {
 
 	log.Printf("Config.Store noUpdateIds: %f\n", noUpdateIds)
 
 	return config.ConfigData.Store(noUpdateIds...)
 }
-
-// func (config *Config) Store(noUpdateIds ...bool) error {
-
-// 	noUpdateId := false
-// 	if len(noUpdateIds) > 0 {
-// 		noUpdateId = noUpdateIds[0]
-// 	}
-
-// 	if !noUpdateId {
-// 		config.UpdateId()
-// 	}
-
-// 	config.mu.Lock()
-// 	defer config.mu.Unlock()
-
-// 	data, err := json.Marshal(config.ConfigData)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return ioutil.WriteFile(config.autoConfigFile, data, 0644)
-// }
 
 func (config *Config) ScriptStaticDir(d ...string) string {
 	// config.mu.Lock()
@@ -291,6 +244,22 @@ func (config *Config) InitCronScript(scriptJs *File.Script) *CronScript.Script {
 	return script
 }
 
+func (config *Config) UpdateCronScript(script *CronScript.Script) error {
+	config.mu.Lock()
+	defer config.mu.Unlock()
+	return config.UpdateCronScriptNonLock(script)
+}
+
+func (config *Config) UpdateCronScriptNonLock(script *CronScript.Script) error {
+	if _, find := config.Scripts[script.ID]; !find {
+		return fmt.Errorf("UpdateCronScriptNonLock.script %s not found\n", script.ID)
+	}
+
+	config.Scripts[script.ID].Update(script)
+
+	return nil
+}
+
 func (config *Config) AddCronScript(script *CronScript.Script) error {
 	config.mu.Lock()
 	defer config.mu.Unlock()
@@ -329,6 +298,10 @@ func (config *Config) CheckDeletedScript(script_id string) {
 func (config *Config) RemoveCronScript(script_id string) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
+	config.RemoveCronScriptNonLock(script_id)
+}
+
+func (config *Config) RemoveCronScriptNonLock(script_id string) {
 
 	script, find := config.Scripts[script_id]
 	if !find {
@@ -451,7 +424,10 @@ func (config *Config) ScriptsList(server_ids ...string) []*CronScript.Script {
 func (config *Config) _scriptsList() []*CronScript.Script {
 	config.mu.Lock()
 	defer config.mu.Unlock()
+	return config._scriptsListNonLock()
+}
 
+func (config *Config) _scriptsListNonLock() []*CronScript.Script {
 	out := []*CronScript.Script{}
 
 	for _, script := range config.Scripts {
