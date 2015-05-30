@@ -1,6 +1,8 @@
-package File
+package History
 
 import (
+	"Config/Data"
+
 	. "gopkg.in/check.v1"
 	// "log"
 	// "strings"
@@ -8,45 +10,45 @@ import (
 	// "time"
 )
 
-func TestConfigFileHistory(t *testing.T) {
+func TestConfigHistory(t *testing.T) {
 	TestingT(t)
 }
 
-type ConfigFileHistoryTestsSuite struct{}
+type ConfigHistoryTestsSuite struct{}
 
-var _ = Suite(&ConfigFileHistoryTestsSuite{})
+var _ = Suite(&ConfigHistoryTestsSuite{})
 
-func (s *ConfigFileHistoryTestsSuite) TestConfigFileHistoryNew(c *C) {
+func (s *ConfigHistoryTestsSuite) TestConfigHistoryNew(c *C) {
 
 	//c.Skip("Not now")
-	history := NewHistory("workstation")
+	history := New("workstation")
 
 	c.Assert(history, NotNil)
 
 }
 
-func (s *ConfigFileHistoryTestsSuite) TestConfigFileHistorySetServerID(c *C) {
+func (s *ConfigHistoryTestsSuite) TestConfigHistorySetServerID(c *C) {
 	//c.Skip("Not now")
 
-	history := NewHistory("workstation")
+	history := New("workstation")
 	c.Assert(history.ServerID, Equals, "workstation")
 
 	history.SetServerID("new_workstation")
 	c.Assert(history.ServerID, Equals, "new_workstation")
 }
 
-func (s *ConfigFileHistoryTestsSuite) TestConfigFileHistoryPush(c *C) {
+func (s *ConfigHistoryTestsSuite) TestConfigHistoryPush(c *C) {
 	//c.Skip("Not now")
 
-	sr := &Server{}
-	sc := &Script{}
+	sr := &Data.Server{}
+	sc := &Data.Script{}
 
-	history := NewHistory("workstation")
+	history := New("workstation")
 	err := history.Push(sr, sc, "add")
 	err = history.Push(sr, sc, "add")
 	c.Assert(err, IsNil)
 
-	history2 := NewHistory("")
+	history2 := New("")
 	err = history2.Push(sr, sc, "add")
 	c.Assert(err, NotNil)
 }

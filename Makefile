@@ -168,3 +168,12 @@ test-conf-file: all
 test-conf-file-cover:
 	cd ./bratok; go test ./src/Config/File/ -cover -coverprofile ./tmp.out; go tool cover -html=./tmp.out -o cover.html; rm ./tmp.out
 
+
+test-conf-hist: all
+	cd ./bratok; go test ./src/Config/History/
+	
+test-conf-hist-cover:
+	cd ./bratok; go test ./src/Config/History/ -cover -coverprofile ./tmp.out; go tool cover -html=./tmp.out -o cover.html; rm ./tmp.out
+
+
+

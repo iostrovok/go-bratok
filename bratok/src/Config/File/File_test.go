@@ -33,27 +33,27 @@ func (s *ConfigFileTestsSuite) TestConfigFileNew(c *C) {
 
 }
 
-func (s *ConfigFileTestsSuite) TestConfigFileSetAutoConfig(c *C) {
-	//c.Skip("Not now")
+// func (s *ConfigFileTestsSuite) TestConfigFileSetAutoConfig(c *C) {
+// 	//c.Skip("Not now")
 
-	file := New("workstation", "configFile")
-	file.FromLine(TestFileLine())
+// 	file := New("workstation", "configFile")
+// 	file.FromLine(TestFileLine())
 
-	err := file.SetAutoConfig(true, "line")
-	c.Assert(err, IsNil)
+// 	err := file.SetAutoConfig(true, "line")
+// 	c.Assert(err, IsNil)
 
-	err = file.SetAutoConfig(false)
-	c.Assert(err, IsNil)
+// 	err = file.SetAutoConfig(false)
+// 	c.Assert(err, IsNil)
 
-	err = file.SetAutoConfig(false, "line")
-	c.Assert(err, IsNil)
+// 	err = file.SetAutoConfig(false, "line")
+// 	c.Assert(err, IsNil)
 
-	err = file.SetAutoConfig(true, "")
-	c.Assert(err, NotNil)
+// 	err = file.SetAutoConfig(true, "")
+// 	c.Assert(err, NotNil)
 
-	err = file.SetAutoConfig(true)
-	c.Assert(err, NotNil)
-}
+// 	err = file.SetAutoConfig(true)
+// 	c.Assert(err, NotNil)
+// }
 
 func (s *ConfigFileTestsSuite) TestConfigFileFindServer(c *C) {
 	//c.Skip("Not now")

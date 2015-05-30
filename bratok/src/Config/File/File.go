@@ -1,6 +1,9 @@
 package File
 
 import (
+	D "Config/Data"
+	"Config/History"
+
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -14,26 +17,6 @@ const (
 	DefaultCofigFile string = "./bratok/conf/config.js"
 )
 
-type Script struct {
-	ID     string   `json:"id"`
-	Time   []string `json:"time"`
-	Exe    string   `json:"exe"`
-	Params []string `json:"params"`
-	Evn    []string `json:"env"`
-}
-
-type Server struct {
-	ID             string   `json:"id"`
-	IP             string   `json:"ip"`
-	Host           string   `json:"host"`
-	Port           int      `json:"port"`
-	IsMaster       bool     `json:"is_master"`
-	Scripts        []string `json:"scripts"`
-	StaticFilesDir string   `json:"staticdir"`
-	ScriptLogFile  string   `json:"logfile"`
-	ScriptLogDir   string   `json:"logdir"`
-}
-
 /* Data from file file */
 type FileHttp struct {
 	Error  string `json:"error"`
@@ -43,13 +26,14 @@ type FileHttp struct {
 
 /* Data from file file */
 type Data struct {
-	Scripts        []*Script `json:"scripts"`
-	Servers        []*Server `json:"servers"`
-	ConfigID       int64     `json:"file_id"`
-	ScriptLogDir   string    `json:"logdir"`
-	ScriptLogFile  string    `json:"logfile"`
-	StaticFilesDir string    `json:"staticdir"`
-	History        *History  `json:"history"`
+	Scripts        []*D.Script `json:"scripts"`
+	Servers        []*D.Server `json:"servers"`
+	ConfigID       int64       `json:"file_id"`
+	ScriptLogDir   string      `json:"logdir"`
+	ScriptLogFile  string      `json:"logfile"`
+	StaticFilesDir string      `json:"staticdir"`
+
+	History *History.History `json:"history"`
 }
 
 /* Data from file file */
@@ -65,8 +49,8 @@ type File struct {
 func New(ServerID, configFile string) *File {
 
 	data := Data{
-		Scripts: []*Script{},
-		Servers: []*Server{},
+		Scripts: []*D.Script{},
+		Servers: []*D.Server{},
 	}
 
 	if ServerID == "" {
@@ -154,13 +138,13 @@ func (file *File) FromLine(data []byte) error {
 func (file *File) _checkDefault() error {
 
 	if file.Data.Servers == nil {
-		file.Data.Servers = []*Server{}
+		file.Data.Servers = []*D.Server{}
 	}
 	if file.Data.Scripts == nil {
-		file.Data.Scripts = []*Script{}
+		file.Data.Scripts = []*D.Script{}
 	}
 	if file.Data.History == nil {
-		file.Data.History = NewHistory(file.serverID)
+		file.Data.History = History.New(file.serverID)
 	} else {
 		file.Data.History.SetServerID(file.serverID)
 	}
@@ -214,7 +198,7 @@ func (file *File) ScriptLogFile() string {
 	return file.Data.ScriptLogFile
 }
 
-func (file *File) FindServer(id string) (*Server, bool) {
+func (file *File) FindServer(id string) (*D.Server, bool) {
 
 	for _, server := range file.Data.Servers {
 		if server.ID == id {
@@ -225,15 +209,15 @@ func (file *File) FindServer(id string) (*Server, bool) {
 	return nil, false
 }
 
-func (file *File) ListServer() []*Server {
+func (file *File) ListServer() []*D.Server {
 	return file.Data.Servers
 }
 
-func (file *File) ListScript() []*Script {
+func (file *File) ListScript() []*D.Script {
 	return file.Data.Scripts
 }
 
-func (file *File) FindScript(id string) (*Script, bool) {
+func (file *File) FindScript(id string) (*D.Script, bool) {
 
 	for _, script := range file.Data.Scripts {
 		if script.ID == id {
@@ -305,7 +289,7 @@ func (file *File) Byte() ([]byte, error) {
 	return data, err
 }
 
-func (file *File) SetScript(script *Script) bool {
+func (file *File) SetScript(script *D.Script) bool {
 
 	find := false
 
@@ -329,7 +313,7 @@ func (file *File) SetScript(script *Script) bool {
 	return find
 }
 
-func (file *File) SetServer(server *Server) bool {
+func (file *File) SetServer(server *D.Server) bool {
 	file.mu.Lock()
 	defer file.mu.Unlock()
 
@@ -354,15 +338,4 @@ func (file *File) SetServer(server *Server) bool {
 	file.Data.Servers = list
 
 	return find
-}
-
-func (server *Server) Clone() *Server {
-	return &Server{
-		ID:       server.ID,
-		IP:       server.IP,
-		Host:     server.Host,
-		Port:     server.Port,
-		IsMaster: server.IsMaster,
-		Scripts:  server.Scripts,
-	}
 }

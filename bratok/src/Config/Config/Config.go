@@ -2,6 +2,7 @@ package Config
 
 import (
 	"Config/CronScript"
+	D "Config/Data"
 	"Config/File"
 	"Config/ReadFlags"
 	"errors"
@@ -166,7 +167,7 @@ func _init(flags *ReadFlags.Flags) *Config {
 func (config *Config) NextConfigId() {
 }
 
-func (config *Config) GetHTTPData() (*File.Server, error) {
+func (config *Config) GetHTTPData() (*D.Server, error) {
 	if sever, find := config.GetServer(config.ServerID); find {
 		return sever, nil
 	}
@@ -233,7 +234,7 @@ func (config *Config) InitNew(data map[string]interface{}) error {
 	return nil
 }
 
-func (config *Config) InitCronScript(scriptJs *File.Script) *CronScript.Script {
+func (config *Config) InitCronScript(scriptJs *D.Script) *CronScript.Script {
 	script := CronScript.New(scriptJs.ID, scriptJs.Exe, scriptJs.Params...)
 	script.SetEnv(scriptJs.Evn)
 	for _, oneTime := range scriptJs.Time {
@@ -328,7 +329,7 @@ func (config *Config) GetScript(id string) (*CronScript.Script, bool) {
 	return nil, false
 }
 
-func (config *Config) GetServer(id string) (*File.Server, bool) {
+func (config *Config) GetServer(id string) (*D.Server, bool) {
 	return config.ConfigData.FindServer(id)
 }
 
@@ -354,7 +355,7 @@ func (config *Config) ReplaceScript(script *CronScript.Script) bool {
 		config.AddCronScriptNonLock(script)
 	}
 
-	fdata := &File.Script{
+	fdata := &D.Script{
 		ID:     script.ID,
 		Time:   script.TimeStr,
 		Exe:    script.Exe,
@@ -365,7 +366,7 @@ func (config *Config) ReplaceScript(script *CronScript.Script) bool {
 	return config.ConfigData.SetScript(fdata)
 }
 
-func (config *Config) ReplaceServer(server *File.Server) bool {
+func (config *Config) ReplaceServer(server *D.Server) bool {
 	config.mu.Lock()
 	defer config.mu.Unlock()
 
@@ -439,6 +440,6 @@ func (config *Config) _scriptsListNonLock() []*CronScript.Script {
 	return out
 }
 
-func (config *Config) ServersList() []*File.Server {
+func (config *Config) ServersList() []*D.Server {
 	return config.ConfigData.ListServer()
 }

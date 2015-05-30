@@ -1,6 +1,8 @@
-package File
+package History
 
 import (
+	"Config/Data"
+
 	"crypto/md5"
 	"fmt"
 	"log"
@@ -10,13 +12,13 @@ import (
 const layout = "2006-01-02T15:04:05.999999999Z07:00"
 
 type ItemHistory struct {
-	ID       string  `json:"id"`
-	PrevID   string  `json:"prev_id"`
-	Time     string  `json:"time"`
-	Script   *Script `json:"script"`
-	Server   *Server `json:"server"`
-	ServerId string  `json:"server_id"`
-	Act      string  `json:"act"`
+	ID       string       `json:"id"`
+	PrevID   string       `json:"prev_id"`
+	Time     string       `json:"time"`
+	Script   *Data.Script `json:"script"`
+	Server   *Data.Server `json:"server"`
+	ServerId string       `json:"server_id"`
+	Act      string       `json:"act"`
 }
 
 type History struct {
@@ -24,7 +26,7 @@ type History struct {
 	Line     []ItemHistory `json:"line"`
 }
 
-func NewHistory(server_id string) *History {
+func New(server_id string) *History {
 
 	h := &History{
 		ServerID: server_id,
@@ -38,7 +40,7 @@ func (h *History) SetServerID(server_id string) {
 	h.ServerID = server_id
 }
 
-func (h *History) Push(sr *Server, sc *Script, act string) error {
+func (h *History) Push(sr *Data.Server, sc *Data.Script, act string) error {
 
 	log.Printf("File.Push 0 file.Data.History: %+v\n", h)
 
