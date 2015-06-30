@@ -15,7 +15,23 @@ const (
 	DefaultCofigFile string = "./bratok/conf/config.js"
 )
 
+/* Data from file file */
+type Data struct {
+	Scripts        []*Script `json:"scripts"`
+	Servers        []*Server `json:"servers"`
+	ConfigID       int64     `json:"file_id"`
+	LogFile        string    `json:"logfile"`
+	StaticFilesDir string    `json:"staticdir"`
+}
+
+// IData
+type IData interface {
+	IsEmpty() bool
+	GetId() string
+}
+
 type Script struct {
+	IData
 	ID     string   `json:"id"`
 	Time   []string `json:"time"`
 	Exe    string   `json:"exe"`
@@ -24,6 +40,7 @@ type Script struct {
 }
 
 type Server struct {
+	IData
 	ID             string   `json:"id"`
 	IP             string   `json:"ip"`
 	Host           string   `json:"host"`
@@ -31,8 +48,36 @@ type Server struct {
 	IsMaster       bool     `json:"is_master"`
 	Scripts        []string `json:"scripts"`
 	StaticFilesDir string   `json:"staticdir"`
-	ScriptLogFile  string   `json:"logfile"`
-	ScriptLogDir   string   `json:"logdir"`
+	LogFile        string   `json:"logfile"`
+}
+
+var _ IData = &Script{}
+var _ IData = &Server{}
+
+func EmptyData() Data {
+
+	d := Data{
+		Scripts: []*Script{},
+		Servers: []*Server{},
+	}
+
+	return d
+}
+
+func (script Script) GetId() string {
+	return script.ID
+}
+
+func (server Server) GetId() string {
+	return server.ID
+}
+
+func (server Script) IsEmpty() bool {
+	return false
+}
+
+func (script Server) IsEmpty() bool {
+	return false
 }
 
 func (server *Server) Clone() *Server {

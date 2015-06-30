@@ -75,7 +75,7 @@ func main() {
 		log.Panicf("%s", errWebClient)
 	}
 
-	fmt.Printf("------> cronConfig.ScriptLogFile(): %s\n", cronConfig.ScriptLogFile())
+	fmt.Printf("------> cronConfig.LogFile(): %s\n", cronConfig.LogFile())
 
 	manager := Manager.New(cronConfig)
 	manager.SetLogger(logger)

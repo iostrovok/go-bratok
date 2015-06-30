@@ -1,8 +1,7 @@
 {
     "config_id": 123123,
     "staticdir": "/Users/ostrovok/Work/bratok-js/public-test/",
-    "logfile": "bratok.scripts.log",
-    "logdir": "/tmp/",
+    "logfile": "/tmp/bratok.scripts.log",
     "scripts": [{
         "id": "ls1",
         "time": ["*/1 * * * *", "*/5 * * * *"],
@@ -36,7 +35,7 @@
         "port": 21223,
         "is_master": false,
         "scripts": ["ls1" ],
-        "logfile": "bratok.scripts-second.log"
+        "logfile": "/tmp/bratok.scripts-second.log"
     }, {
         "id": "third",
         "ip": "127.0.0.1",
@@ -44,7 +43,6 @@
         "port": 21224,
         "is_master": false,
         "scripts": ["ls2"],
-        "logfile": "bratok.scripts-third.log",
-        "logdir": "/tmp/third/"
+        "logfile": "/tmp/third/bratok.scripts-third.log"
     }]
 }

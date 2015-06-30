@@ -28,21 +28,12 @@ func (s *ConfigTestsSuite) TestConfigCanNew(c *C) {
 	c.Assert(config, NotNil)
 }
 
-func (s *ConfigTestsSuite) TestConfigScriptLogDir(c *C) {
+func (s *ConfigTestsSuite) TestConfigLogFile(c *C) {
 	c.Skip("Not now")
 
 	config := New(ReadFlags.NewTest())
 
-	out := config.ScriptLogDir("/wqeqweq/")
-	c.Assert(out, Equals, "/wqeqweq/")
-}
-
-func (s *ConfigTestsSuite) TestConfigScriptLogFile(c *C) {
-	c.Skip("Not now")
-
-	config := New(ReadFlags.NewTest())
-
-	out := config.ScriptLogFile("my.log")
+	out := config.LogFile("my.log")
 	c.Assert(out, Equals, "/tmp/my.log")
 }
 
@@ -123,8 +114,6 @@ func (s *ConfigTestsSuite) TestConfigLoadConfigData(c *C) {
 
 	log.Printf("TestConfigLoadConfigData config: %+v\n", config)
 
-	c.Assert(config.scriptLogDir, Equals, "workstation_DIR")
-	c.Assert(config.scriptLogFile, Equals, "workstation_FILE")
 	c.Assert(config.staticDir, Equals, "workstation_STATIC-DIR")
 	c.Assert(len(config.ScriptsList()), Equals, 4)
 	c.Assert(len(config.ServersList()), Equals, 2)
@@ -138,11 +127,8 @@ func (s *ConfigTestsSuite) TestConfigLoadConfigData2(c *C) {
 
 	config.FromLine(File.TestFileLine())
 
-	c.Assert(config.ScriptLogDir(), Equals, "workstation_DIR")
-	c.Assert(config.ScriptLogDir("DIR-NEW/"), Equals, "DIR-NEW/")
-
-	c.Assert(config.ScriptLogFile(), Equals, "DIR-NEW/FILE")
-	c.Assert(config.ScriptLogFile("FILE-NEW"), Equals, "DIR-NEW/FILE-NEW")
+	c.Assert(config.LogFile(), Equals, "DIR-NEW/FILE")
+	c.Assert(config.LogFile("FILE-NEW"), Equals, "DIR-NEW/FILE-NEW")
 }
 
 func (s *ConfigTestsSuite) TestConfigLoadHTTPLine(c *C) {
@@ -153,8 +139,7 @@ func (s *ConfigTestsSuite) TestConfigLoadHTTPLine(c *C) {
 	err := config.LoadHTTPLine(File.TestFileLineHttp())
 	c.Assert(err, IsNil)
 
-	c.Assert(config.ScriptLogDir(), Equals, "workstation_DIR")
-	c.Assert(config.ScriptLogFile(), Equals, "workstation_DIR/workstation_FILE")
+	c.Assert(config.LogFile(), Equals, "workstation_DIR/workstation_FILE")
 }
 
 func (s *ConfigTestsSuite) TestConfigGetHTTPData(c *C) {

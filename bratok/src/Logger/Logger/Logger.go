@@ -23,7 +23,7 @@ type Logger struct {
 
 func New(config *Config.Config) *Logger {
 
-	logFile, err := os.OpenFile(config.ScriptLogFile(), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	logFile, err := os.OpenFile(config.LogFile(), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 
 	if err != nil {
 		panic(err)

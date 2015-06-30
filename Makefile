@@ -22,14 +22,15 @@ run2:
 	 go run ./bratok/src/scripts/run.go -id=second -master_host="http://127.0.0.1:21222"
 
 run3:
-	 go run ./bratok/src/scripts/run.go -id=third -master_host="http://127.0.0.1:21222"
+	 go run ./bratok/src/scripts/run.go -id=third -master_host="http://127.0.0.1:21222" -log=/tmp/third/bratok.scripts-third.log
+ -staticdir=/tmp/second_server 
 
 log:
 	tail -f /tmp/bratok.scripts.log
 
 test: all test-butils test-flags test-hmem test-conf-file test-conf-http test-conf-load test-conf test-cron test-cronscheduler \
 	test-cronscript test-h-common test-manager test-message test-net test-net test-server test-task \
-	test-webserver test-timer
+	test-conf-hist test-webserver test-timer
 
 
 test-butils: all
@@ -109,13 +110,6 @@ test-cronscript-cover:
 	cd ./bratok; go test ./src/Config/CronScript/ -cover -coverprofile ./tmp.out; go tool cover -html=./tmp.out -o cover.html; rm ./tmp.out
 
 
-test-conf-http: all
-	cd ./bratok; go test ./src/Config/ConfigHttp/
-	
-test-conf-http-cover:
-	cd ./bratok; go test ./src/Config/ConfigHttp/ -cover -coverprofile ./tmp.out; go tool cover -html=./tmp.out -o cover.html; rm ./tmp.out
-
-
 test-webserver: all
 	cd ./bratok; go test ./src/Web/WebServer/
 	
@@ -175,5 +169,10 @@ test-conf-hist: all
 test-conf-hist-cover:
 	cd ./bratok; go test ./src/Config/History/ -cover -coverprofile ./tmp.out; go tool cover -html=./tmp.out -o cover.html; rm ./tmp.out
 
+test-conf-http: all
+	cd ./bratok; go test ./src/Config/ConfigHttp/
+
+test-conf-http-cover:
+	cd ./bratok; go test ./src/Config/ConfigHttp/ -cover -coverprofile ./tmp.out; go tool cover -html=./tmp.out -o cover.html; rm ./tmp.out
 
 

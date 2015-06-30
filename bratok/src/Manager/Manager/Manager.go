@@ -53,7 +53,7 @@ func New(config *Config.Config) *Manager {
 	manager.config = config
 	manager.cron = Cron.NewCron(config)
 
-	config.ScriptLogFile()
+	//config.LogFile()
 
 	manager.chTimerFrom = CronMessage.Channel()
 	manager.timer = CronTimer.Start(1, manager.Wg, manager.chTimerFrom)

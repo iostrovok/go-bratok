@@ -18,21 +18,15 @@ const (
 )
 
 /* Data from file file */
-type FileHttp struct {
-	Error  string `json:"error"`
-	Data   Data   `json:"data"`
-	Result int    `json:"result"`
+type FileHttpInput struct {
+	Error  string   `json:"error"`
+	InData FileHttp `json:"data"`
+	Result int      `json:"result"`
 }
 
 /* Data from file file */
-type Data struct {
-	Scripts        []*D.Script `json:"scripts"`
-	Servers        []*D.Server `json:"servers"`
-	ConfigID       int64       `json:"file_id"`
-	ScriptLogDir   string      `json:"logdir"`
-	ScriptLogFile  string      `json:"logfile"`
-	StaticFilesDir string      `json:"staticdir"`
-
+type FileHttp struct {
+	Data    D.Data           `json:"data"`
 	History *History.History `json:"history"`
 }
 
@@ -41,17 +35,13 @@ type File struct {
 	autoConfigFile string
 
 	configFile string
-	Data       Data
+	Data       D.Data
 	mu         *sync.Mutex
 	serverID   string
+	History    *History.History `json:"history"`
 }
 
 func New(ServerID, configFile string) *File {
-
-	data := Data{
-		Scripts: []*D.Script{},
-		Servers: []*D.Server{},
-	}
 
 	if ServerID == "" {
 		// TODO make error as error :)
@@ -64,7 +54,7 @@ func New(ServerID, configFile string) *File {
 	}
 
 	file := &File{
-		Data:       data,
+		Data:       D.EmptyData(),
 		serverID:   ServerID,
 		configFile: configFile,
 		mu:         &sync.Mutex{},
@@ -84,19 +74,29 @@ func (file *File) SetAutoConfigFile() {
 
 func (file *File) LoadHTTPLine(data []byte) error {
 
-	confData := FileHttp{}
-	err := json.Unmarshal(data, &confData)
+	confDataInput := FileHttpInput{}
+
+	err := json.Unmarshal(data, &confDataInput)
 	if err != nil {
 		return err
 	}
 
+	confData := confDataInput.InData
+
 	if len(confData.Data.Servers) == 0 {
-		return errors.New("Remout config is empty")
+		log.Printf("file *File LoadHTTPLine. file.Data: %v\n", confData)
+		log.Printf("file *File LoadHTTPLine. file.Data: %v\n", confData.Data)
+		return errors.New("LoadHTTPLine. Remout config is empty")
 	}
 
 	log.Printf("file *File LoadHTTPLine. file.Data: %v\n", confData.Data)
 
-	file.Data = confData.Data
+	if file.History == nil || file.History.Empty() {
+		file.History = confData.History
+		file.Data = confData.Data
+	} else {
+		//file.Data = file.History.Merge(confData.Data, confData.History)
+	}
 	return file._checkDefault()
 }
 
@@ -129,7 +129,7 @@ func (file *File) FromLine(data []byte) error {
 	}
 
 	if file.Data.Servers == nil || len(file.Data.Servers) == 0 {
-		return errors.New("Remout config is empty")
+		return errors.New("FromLine. Remout config is empty")
 	}
 
 	return file._checkDefault()
@@ -143,10 +143,11 @@ func (file *File) _checkDefault() error {
 	if file.Data.Scripts == nil {
 		file.Data.Scripts = []*D.Script{}
 	}
-	if file.Data.History == nil {
-		file.Data.History = History.New(file.serverID)
+	if file.History == nil {
+		file.History = History.New(file.serverID, file.IsMaster())
 	} else {
-		file.Data.History.SetServerID(file.serverID)
+		file.History.SetServerID(file.serverID)
+		file.History.SetIsMaster(file.IsMaster())
 	}
 
 	file.SetAutoConfigFile()
@@ -155,7 +156,7 @@ func (file *File) _checkDefault() error {
 }
 
 func (file *File) _parseConfigData(data []byte) error {
-	file.Data = Data{}
+	file.Data = D.EmptyData()
 	return json.Unmarshal(data, &file.Data)
 }
 
@@ -167,15 +168,12 @@ func (file *File) ConfigID() int64 {
 	return file.Data.ConfigID
 }
 
-func (file *File) ScriptLogDir() string {
-	server, find := file.FindServer(file.serverID)
+func (file *File) IsMaster() bool {
+	server, find := file.SelfServer()
 	if find {
-		if server.ScriptLogDir != "" {
-			return server.ScriptLogDir
-		}
+		return server.IsMaster
 	}
-
-	return file.Data.ScriptLogDir
+	return false
 }
 
 func (file *File) StaticFilesDir() string {
@@ -188,14 +186,14 @@ func (file *File) StaticFilesDir() string {
 	return file.Data.StaticFilesDir
 }
 
-func (file *File) ScriptLogFile() string {
+func (file *File) LogFile() string {
 	if server, find := file.FindServer(file.serverID); find {
-		if server.ScriptLogFile != "" {
-			return server.ScriptLogFile
+		if server.LogFile != "" {
+			return server.LogFile
 		}
 	}
 
-	return file.Data.ScriptLogFile
+	return file.Data.LogFile
 }
 
 func (file *File) FindServer(id string) (*D.Server, bool) {
@@ -259,7 +257,7 @@ func (file *File) Store(noUpdateIds ...bool) error {
 	}
 
 	log.Printf("File.Store 2-0 file.Data: %+v\n", file.Data)
-	log.Printf("File.Store 2-1 file.Data.History: %+v\n", file.Data.History)
+	log.Printf("File.Store 2-1 file.Data.History: %+v\n", file.History)
 
 	file.mu.Lock()
 	defer file.mu.Unlock()
@@ -300,17 +298,21 @@ func (file *File) SetScript(script *D.Script) bool {
 		if sc.ID == script.ID {
 			file.Data.Scripts[i] = script
 			find = true
-			file.Data.History.Push(nil, script, "replace")
+			file.History.Push(nil, script, "replace")
 			break
 		}
 	}
 
 	if !find {
 		file.Data.Scripts = append(file.Data.Scripts, script)
-		file.Data.History.Push(nil, script, "add")
+		file.History.Push(nil, script, "add")
 	}
 
 	return find
+}
+
+func (file *File) SelfServer() (*D.Server, bool) {
+	return file.FindServer(file.serverID)
 }
 
 func (file *File) SetServer(server *D.Server) bool {
@@ -325,14 +327,14 @@ func (file *File) SetServer(server *D.Server) bool {
 		if s.ID == server.ID {
 			list[i] = server
 			find = true
-			file.Data.History.Push(server, nil, "replace")
+			file.History.Push(server, nil, "replace")
 			break
 		}
 	}
 
 	if !find {
 		list = append(list, server)
-		file.Data.History.Push(server, nil, "add")
+		file.History.Push(server, nil, "add")
 	}
 
 	file.Data.Servers = list

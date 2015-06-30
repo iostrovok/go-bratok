@@ -5,10 +5,12 @@ import (
 	D "Config/Data"
 	"Config/File"
 	"Config/ReadFlags"
+
 	"errors"
 	"fmt"
 	"log"
-	//"os"
+	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -24,16 +26,15 @@ const (
 )
 
 type Config struct {
-	ServerID      string
-	Scripts       map[string]*CronScript.Script
-	scriptLogDir  string
-	scriptLogFile string
-	configFile    string
-	staticDir     string
-	flags         *ReadFlags.Flags
-	ConfigData    *File.File
-	ErrorLoad     error
-	mu            *sync.Mutex
+	ServerID   string
+	Scripts    map[string]*CronScript.Script
+	logFile    string
+	configFile string
+	staticDir  string
+	flags      *ReadFlags.Flags
+	ConfigData *File.File
+	ErrorLoad  error
+	mu         *sync.Mutex
 }
 
 func New(flags *ReadFlags.Flags) *Config {
@@ -96,11 +97,8 @@ func (config *Config) FromLine(RemoutConfig []byte) error {
 func (config *Config) _loadConfigData() error {
 	cd := config.ConfigData
 
-	if cd.ScriptLogDir() != "" {
-		config.scriptLogDir = cd.ScriptLogDir()
-	}
-	if cd.ScriptLogFile() != "" {
-		config.scriptLogFile = cd.ScriptLogFile()
+	if cd.LogFile() != "" {
+		config.logFile = cd.LogFile()
 	}
 	if cd.StaticFilesDir() != "" {
 		config.staticDir = cd.StaticFilesDir()
@@ -145,8 +143,7 @@ func _init(flags *ReadFlags.Flags) *Config {
 	config.mu = &sync.Mutex{}
 	config.Scripts = map[string]*CronScript.Script{}
 
-	config.scriptLogDir = "/tmp/"
-	config.scriptLogFile = "bratok.scripts.log"
+	config.logFile = "/tmp/bratok.scripts.log"
 
 	if flags == nil {
 		config.ErrorLoad = errors.New("No found ServerID")
@@ -161,7 +158,37 @@ func _init(flags *ReadFlags.Flags) *Config {
 	config.ServerID = flags.ServerID
 	config.flags = flags
 
+	if flags.StaticDir != "" {
+		config.staticDir = flags.StaticDir
+	}
+	if flags.LogFile != "" {
+		config.logFile = flags.LogFile
+	}
+
+	dir := path.Dir(config.logFile)
+	exDir, errDir := existsDirFile(dir)
+	if errDir != nil {
+		config.ErrorLoad = errDir
+	} else if !exDir {
+		config.ErrorLoad = os.MkdirAll(dir, 0777)
+	}
+
 	return &config
+}
+
+// exists returns whether the given file or directory exists or not
+func existsDirFile(path string) (bool, error) {
+	_, err := os.Stat(path)
+
+	if err == nil {
+		return true, nil
+	}
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return true, err
 }
 
 func (config *Config) NextConfigId() {
@@ -196,38 +223,8 @@ func (config *Config) ScriptStaticDir(d ...string) string {
 	return config.staticDir
 }
 
-func (config *Config) ScriptLogDir(d ...string) string {
-	// config.mu.Lock()
-	// defer config.mu.Unlock()
-
-	// if len(d) > 0 {
-	// 	config.scriptLogDir = d[0]
-	// }
-	return config.scriptLogDir
-}
-
-func (config *Config) ScriptLogFile(f ...string) string {
-	// config.mu.Lock()
-
-	// if len(f) > 0 {
-	// 	config.scriptLogFile = f[0]
-	// }
-
-	j := ""
-	if last := len(config.scriptLogDir) - 1; last >= 0 && config.scriptLogDir[last] != '/' {
-		j = "/"
-	}
-
-	out := config.scriptLogDir + j + config.scriptLogFile
-	// config.mu.Unlock()
-
-	// if httpConfig, err := config.GetHTTPData(); err == nil {
-	// 	if httpConfig.ScriptLogFile != "" {
-	// 		out = config.scriptLogDir + httpConfig.ScriptLogFile
-	// 	}
-	// }
-
-	return out
+func (config *Config) LogFile(f ...string) string {
+	return config.logFile
 }
 
 func (config *Config) InitNew(data map[string]interface{}) error {

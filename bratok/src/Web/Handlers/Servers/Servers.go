@@ -36,8 +36,9 @@ func ConfigUpdate(res http.ResponseWriter, req *http.Request) {
 // Config returns config
 func GetConfig(res http.ResponseWriter, req *http.Request) {
 	conf := Common.GetConfigData()
+	history := Common.GetHistoryData()
 	log.Printf("Servers. Config: %s\n ", conf)
-	Common.SendJsonSuccess(res, conf)
+	Common.SendJsonSuccess(res, map[string]interface{}{"data": conf, "history": history})
 }
 
 // All is handler
@@ -84,6 +85,10 @@ func Save(res http.ResponseWriter, req *http.Request) {
 	ip := BUtils.AnyToString(BUtils.GetPath(form, "ip"))
 	host := BUtils.AnyToString(BUtils.GetPath(form, "host"))
 	port := BUtils.AnyToInt(BUtils.GetPath(form, "port"))
+
+	logdir := BUtils.AnyToString(BUtils.GetPath(form, "logdir"))
+	logfile := BUtils.AnyToString(BUtils.GetPath(form, "logfile"))
+	staticdir := BUtils.AnyToString(BUtils.GetPath(form, "staticdir"))
 	is_master := BUtils.AnyToBool(BUtils.GetPath(form, "is_master"))
 
 	/*  Get only selected scripts from full list */
@@ -104,8 +109,11 @@ func Save(res http.ResponseWriter, req *http.Request) {
 		"ip":        ip,
 		"host":      host,
 		"port":      port,
+		"logfile":   logfile,
+		"logdir":    logdir,
 		"is_master": is_master,
 		"scripts":   scripts,
+		"staticdir": staticdir,
 	}
 
 	mes := Common.ToFromManager(id, "save_server", dataForManager)

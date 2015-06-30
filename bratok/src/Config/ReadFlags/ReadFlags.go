@@ -21,7 +21,9 @@ func NewTest(server_ids ...string) *Flags {
 		ConfigHost: "",
 		Path:       "./",
 		//ConfFile:   "./bratok/conf/config.js",
-		ConfFile: "",
+		ConfFile:  "",
+		LogFile:   "",
+		StaticDir: "",
 	}
 
 	return &f
@@ -39,6 +41,8 @@ type Flags struct {
 	ServerID   string
 	Path       string
 	ConfFile   string
+	StaticDir  string
+	LogFile    string
 }
 
 func New() *Flags {
@@ -52,6 +56,7 @@ func New() *Flags {
 		ConfigHost: "",
 		Path:       "",
 		ConfFile:   "",
+		StaticDir:  "",
 	}
 
 	return &f
@@ -67,6 +72,8 @@ func (f *Flags) Read() error {
 	configHost := flag.String("master_host", "", "-ch")
 	path := flag.String("path", "", "-pa")
 	confFile := flag.String("config", "", "-cf")
+	staticdir := flag.String("staticdir", "", "-sd")
+	logfile := flag.String("log", "", "-sd")
 
 	flag.Parse()
 
@@ -78,6 +85,8 @@ func (f *Flags) Read() error {
 	f.ConfigHost = *configHost
 	f.Path = *path
 	f.ConfFile = *confFile
+	f.StaticDir = *staticdir
+	f.LogFile = *logfile
 
 	return f.Check()
 }

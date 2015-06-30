@@ -57,6 +57,9 @@ func (manager *Manager) saveServer(mes CronMessage.Mess) (map[string]interface{}
 	server.Scripts = BUtils.AnyToStringArray(BUtils.GetPath(mes.Hash, "scripts"))
 	server.IsMaster = BUtils.AnyToBool(BUtils.GetPath(mes.Hash, "is_master"))
 
+	server.StaticFilesDir = BUtils.AnyToString(BUtils.GetPath(mes.Hash, "staticdir"))
+	server.LogFile = BUtils.AnyToString(BUtils.GetPath(mes.Hash, "logfile"))
+
 	log.Printf("Save/Add server: %s\n", server)
 
 	manager.config.ReplaceServer(server)
